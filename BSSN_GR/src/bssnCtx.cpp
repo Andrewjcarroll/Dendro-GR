@@ -1096,6 +1096,10 @@ bool BSSNCtx::is_remesh() {
         isRefine = (isR1 || isR2);
     } else if (bssn::BSSN_REFINEMENT_MODE == bssn::RefinementMode::BH_LOC) {
         isRefine = bssn::isRemeshBH(m_uiMesh, m_uiBHLoc);
+    } else if (bssn::BSSN_REFINEMENT_MODE == bssn::RefinementMode::PURE_WAMR) {
+        isRefine = m_uiMesh->isReMeshUnzip(
+            (const double **)unzipVar, refineVarIds, bssn::BSSN_NUM_REFINE_VARS,
+            waveletTolFunc, bssn::BSSN_DENDRO_AMR_FAC);
     }
 
     return isRefine;
