@@ -88,7 +88,7 @@ namespace bssn
      * @param var Initialized data eval at (x,y,z) point. 
      */
     void punctureDataPhysicalCoord(const double xx,const double yy,const double zz, double *var);
- 
+
     /**
      * @brief compute the static Kerr-Schild BH data
      * 
@@ -98,7 +98,47 @@ namespace bssn
      * @param var : initialized bssn variables for the grid points
      */
     void KerrSchildData(const double xx1,const double yy1,const double zz1, double *var);
- 
+
+    /**
+     * @brief add artificial noise to the initial data.
+     * @param xx1 : x coord
+     * @param yy1 : y coord
+     * @param zz1 : z coord
+     * @param var : initialized bssn variables for the grid points
+     */
+    void SchwarzschildData(const double xx1, const double yy1, const double zz1,
+                           double* var);
+
+    /**
+     * @brief add artificial noise to the initial data.
+     * @param xx1 : x coord
+     * @param yy1 : y coord
+     * @param zz1 : z coord
+     * @param var : initialized bssn variables for the grid points
+     */
+    void kerrData(const double xx1, const double yy1, const double zz1,
+                  double* var);
+
+    /**
+     * @brief add artificial noise to the initial data.
+     * @param xx1 : x coord
+     * @param yy1 : y coord
+     * @param zz1 : z coord
+     * @param var : initialized bssn variables for the grid points
+     */
+    void TeukData(const double xx1, const double yy1, const double zz1,
+                  double* var);
+
+    /**
+     * @brief add artificial noise to the initial data.
+     * @param xx1 : x coord
+     * @param yy1 : y coord
+     * @param zz1 : z coord
+     * @param var : initialized bssn variables for the grid points
+     */
+    void SCData(const double xx1, const double yy1, const double zz1,
+                double* var);
+
     /**
      * @brief add artificial noise to the initial data.
      * @param xx1 : x coord

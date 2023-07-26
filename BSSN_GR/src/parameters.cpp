@@ -144,6 +144,17 @@ namespace bssn
     double BSSN_EH_REFINE_VAL = 0.3 ;
     double BSSN_EH_COARSEN_VAL = 0.4;
 
+    unsigned int TEUK_GAUGE;
+    int TEUK_L_MODE;
+    int TEUK_M_MODE;
+    unsigned int MULTIPOLE_PARITY;
+    unsigned int TEUK_ID_DYNAMICS_TYPE;
+    unsigned int TEUK_ID_FUNCTIONAL_FORM;
+    double TEUK_AMP;
+    double TEUK_WIDTH; 
+    double TEUK_R_0;
+    unsigned int TEUK_KK;
+
     // by default use WAMR refinement. 
     RefinementMode BSSN_REFINEMENT_MODE = RefinementMode::WAMR;
 

@@ -329,6 +329,41 @@ namespace bssn
     /***@brief: derivs workspace*/
     extern double* BSSN_DERIV_WORKSPACE;
 
+    /**@brief: TEUKOLSKY PARAMETERS*/
+    // Choose the gauge in which we will work.  Choices include
+    // TT gauge (0, default) and the "LATE" gauge of
+    // Lorentz-Thorne-Abrahams-Evans (1)
+    extern unsigned int TEUK_GAUGE;
+    /**@brief: TEUKOLSKY PARAMETERS*/
+    // Choose the multipole order:  (l,m).  Choices include
+    // quadrupole (l=2, default), octopole (l=3), and hexadecapole
+    // (l=4) with all the possible m values (m=0, default).
+    extern int TEUK_L_MODE;
+    extern int TEUK_M_MODE;
+
+    // Choose the polarization state.  Choices are either even
+    // (0, default) or odd (1) parity waves.
+    extern unsigned int MULTIPOLE_PARITY;
+
+    // Choose the dynamics or time behavior of the initial data.
+    // Choices include time symmetric (0, default), ingoing (1),
+    // outgoing (2), time anti-symmetric (3) and general (4).
+    extern unsigned int TEUK_ID_DYNAMICS_TYPE;
+
+    // Choose the functional form of the initial pulse.  Choices
+    // include a C^k polynomial with compact support (0, default)
+    // a Gaussian (1), a bump function (2), and Abrahams and Evans"
+    // Hermite polynomial modulated Gaussian (3).
+    extern unsigned int TEUK_ID_FUNCTIONAL_FORM;
+
+    // The amplitude, (half-)width and center of the initial data:
+    extern double TEUK_AMP;
+    extern double TEUK_WIDTH;  // half width really; width is twice this
+    extern double TEUK_R_0;
+    // The order of differentiability of the C^k polynomials with
+    // compact support.
+    extern unsigned int TEUK_KK;
+
     // note ko derivs are not included
     #ifdef BSSN_USE_ADVECTIVE_DERIVS
         const unsigned int BSSN_NUM_DERIVS= 138 + 74;
