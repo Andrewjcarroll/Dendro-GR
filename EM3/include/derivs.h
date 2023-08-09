@@ -1,8 +1,17 @@
 #pragma once
 #include <cmath>
 #include "TreeNode.h"
+#include "kim.h"
+#include "HAMR.h"
+#include "JTP6.h"
+#include "kim_filter.h"
 
 #define IDX(i, j, k) ((i) + nx * ((j) + ny * (k)))
+
+extern double *R;
+extern double *RF;
+extern double *u1d;
+extern double *du1d;
 
 
 void deriv42_x(double *const Dxu, const double *const u, const double dx, const unsigned int *sz, unsigned bflag);
@@ -110,6 +119,23 @@ void deriv8666_xy(double *const DxDyu, double* const Dxu, const double *const u,
 void deriv8666_xz(double *const DxDzu, double* const Dxu, const double *const u, const double dx, const double dz, const unsigned int *sz, unsigned bflag);
 void deriv8666_yz(double *const DyDzu, double* const Dyu, const double *const u, const double dy, const double dz, const unsigned int *sz, unsigned bflag);
 
+void cfd_x(double * const  Dxu,const double * const  u,const double dx, const unsigned int *sz, double * R, double * const u1d, double * const dxu1d, unsigned bflag);
+void cfd_y(double * const  Dxu,const double * const  u,const double dx, const unsigned int *sz, double * R, double * const u1d, double * const dxu1d, unsigned bflag);
+void cfd_z(double * const  Dxu,const double * const  u,const double dx, const unsigned int *sz, double * R, double * const u1d, double * const dxu1d, unsigned bflag);
+
+void filter_cfd_x(double *const u, const double dx,
+                       const unsigned int *sz, double *RF, double *f1d,
+                       double *df1d, unsigned bflag);
+void filter_cfd_y(double *const u, const double dy,
+                  const unsigned int *sz, double *RF, double *f1d,
+                  double *df1d, unsigned bflag);
+void filter_cfd_z(double *const u, const double dz,
+                  const unsigned int *sz, double *RF, double *f1d,
+                  double *df1d, unsigned bflag);
+
+void initCompactFD(int dtype, const unsigned int nd);
+void init_filter_CompactFD(int ftype, const unsigned int nd);
+
 #ifdef EM3_USE_4TH_ORDER_DERIVS
     #define deriv_x deriv42_x
     #define deriv_y deriv42_y
@@ -118,7 +144,6 @@ void deriv8666_yz(double *const DyDzu, double* const Dyu, const double *const u,
     #define deriv_xx deriv42_xx
     #define deriv_yy deriv42_yy
     #define deriv_zz deriv42_zz
-
     #define deriv_xy deriv42_xy
     #define deriv_xz deriv42_xz
     #define deriv_yz deriv42_yz
@@ -169,3 +194,10 @@ void deriv8666_yz(double *const DyDzu, double* const Dyu, const double *const u,
     #define ko_deriv_y ko_deriv64_y
     #define ko_deriv_z ko_deriv64_z
 #endif
+
+
+//#ifdef EM3_DERIV_TYPE 
+   // #define cfd_x
+  //  #define cfd_y
+ //   #define cfd_z
+//#endif

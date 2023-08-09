@@ -39,19 +39,27 @@ set(EM3_INC include/parameters.h
         include/rk4em3.h
         include/em3Utils.h
         include/rhs.h
+        include/kim.h
         include/derivs.h
         include/profile_params.h
         include/physcon.h 
         include/em3Ctx.h
+        include/JTP6.h
+        include/HAMR.h
+        include/kim_filter.h
         )
 
-set(EM3_SRC src/rk4em3.cpp
+        set(EM3_SRC src/rk4em3.cpp
         src/parameters.cpp
         src/em3Utils.cpp
         src/rhs.cpp
         src/derivs.cpp
+        src/kim.cpp
+        src/HAMR.cpp
         src/profile_params.cpp
         src/physcon.cpp 
+        src/JTP6.cpp
+        src/kim_filter.cpp
         #src/em3Ctx.cpp
         )
 

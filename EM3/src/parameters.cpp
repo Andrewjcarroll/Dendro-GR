@@ -85,6 +85,9 @@ namespace em3
     unsigned int EM3_VTU_OUTPUT_EVOL_INDICES[EM3_NUM_VARS]={0,1,2,3,4,5};
     unsigned int EM3_VTU_OUTPUT_CONST_INDICES[EM3_CONSTRAINT_NUM_VARS]={0,1};
 
+    unsigned int EM3_DERIV_TYPE=0;
+    unsigned int EM3_FILTER_TYPE=0;
+
     double EM3_ID_AMP1 = 0.5;
     double EM3_ID_AMP2 = 0.5;
     double EM3_ID_LAMBDA1 = 1.0;

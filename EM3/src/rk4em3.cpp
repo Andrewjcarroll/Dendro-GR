@@ -698,6 +698,8 @@ namespace ode
 
                         em3rhs(m_uiUnzipVarRHS, (const double **)m_uiUnzipVar, offset, ptmin, ptmax, sz, bflag);
 
+                          em3rhs_CFD(m_uiUnzipVarRHS, m_uiUnzipVar, offset,
+                       ptmin, ptmax, sz, bflag);
 
                     }
 
@@ -840,6 +842,16 @@ namespace ode
             std::function<double(double,double,double,double*)> waveletTolFunc =[wTol](double x,double y, double z,double*hx) {
             return em3::computeWTol(x,y,z,hx);
             };
+
+
+            // set up compact finite differences
+            int dtype = em3::EM3_DERIV_TYPE;
+            unsigned int sz2 = 2 * em3::EM3_ELE_ORDER + 1;
+            initCompactFD(dtype, sz2);
+
+            //Not sure where is the best place to put this yet
+            int ftype = em3::EM3_FILTER_TYPE;
+            init_filter_CompactFD(ftype, sz2);
 
 
             double l_min,l_max;

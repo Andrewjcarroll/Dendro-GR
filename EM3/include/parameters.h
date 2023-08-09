@@ -318,6 +318,11 @@ namespace em3
     ///**@brief: if true output only the z slice*/
     extern bool EM3_VTU_Z_SLICE_ONLY;
 
+    extern unsigned int EM3_DERIV_TYPE;
+     /**@brief: Used to choose which compact finite difference deriv Filter to use*/
+    extern unsigned int EM3_FILTER_TYPE;
+
+
 }
 
 

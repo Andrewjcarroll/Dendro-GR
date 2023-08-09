@@ -35,4 +35,9 @@ void em3_bcs(double *f_rhs, const double *f,
               const double f_falloff, const double f_asymptotic,
               const unsigned int *sz, const unsigned int &bflag);
 
+void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
+                const unsigned int &offset, const double *pmin, const double *pmax,
+                const unsigned int *sz, const unsigned int &bflag);
+
+
 #endif
