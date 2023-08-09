@@ -7030,15 +7030,15 @@ void filter_cfd_z(double *const u, const double dz,
         }
     }
 
-    // Print the RF matrix
-    std::cout << (sz[0]) << std::endl;
-    printf("RF matrix:\n");
-    for (unsigned int k = 0; k < nz; k++)
-    {
-        for (unsigned int m = 0; m < nz; m++)
-        {
-            printf("%f ", R[k * nz + m]);
-        }
-        printf("\n");
-    }
+    // // Print the RF matrix
+    // std::cout << (sz[0]) << std::endl;
+    // printf("RF matrix:\n");
+    // for (unsigned int k = 0; k < nz; k++)
+    // {
+    //     for (unsigned int m = 0; m < nz; m++)
+    //     {
+    //         printf("%f ", R[k * nz + m]);
+    //     }
+    //     printf("\n");
+    // }
 }

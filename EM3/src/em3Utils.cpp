@@ -201,6 +201,9 @@ namespace em3
         par::Mpi_Bcast(&EM3_DIM,1,0,comm);
         par::Mpi_Bcast(&EM3_MAXDEPTH,1,0,comm);
 
+        par::Mpi_Bcast(&EM3_DERIV_TYPE,1,0,comm);
+        par::Mpi_Bcast(&EM3_FILTER_TYPE,1,0,comm);
+
         par::Mpi_Bcast(&EM3_ID_TYPE,1,0,comm);
         par::Mpi_Bcast(&EM3_ID_AMP1,1,0,comm);
         par::Mpi_Bcast(&EM3_ID_LAMBDA1,1,0,comm);
