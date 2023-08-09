@@ -69,7 +69,11 @@ namespace em3
             if(parFile.find("DISSIPATION_TYPE") != parFile.end()) {
                 em3::DISSIPATION_TYPE=parFile["DISSIPATION_TYPE"];
             };
+        
+            em3::EM3_DERIV_TYPE=parFile["EM3_DERIV_TYPE"];
 
+            em3::EM3_FILTER_TYPE=parFile["EM3_FILTER_TYPE"];
+            
             em3::EM3_ID_TYPE=parFile["EM3_ID_TYPE"];
             em3::EM3_ID_AMP1=parFile["EM3_ID_AMP1"];
             em3::EM3_ID_LAMBDA1=parFile["EM3_ID_LAMBDA1"];
@@ -354,7 +358,7 @@ namespace em3
             sout<<em3::EM3_REFINE_VARIABLE_INDICES[em3::EM3_NUM_REFINE_VARS-1]<<"]"<<NRM<<std::endl;
 
             sout<<YLW<<"\tEM3_REFINEMENT_MODE :"<<em3::EM3_REFINEMENT_MODE<<NRM<<std::endl;
-
+            sout<<YLW<<"\tEM3_DERIV_TYPE : "<<em3::EM3_DERIV_TYPE<<NRM<<std::endl;
             sout<<YLW<<"\tEM3_NUM_EVOL_VARS_VTU_OUTPUT :"<<em3::EM3_NUM_EVOL_VARS_VTU_OUTPUT<<NRM<<std::endl;
             sout<<YLW<<"\tEM3_VTU_OUTPUT_EVOL_INDICES :[";
             for(unsigned int i=0;i<em3::EM3_NUM_EVOL_VARS_VTU_OUTPUT-1;i++)
