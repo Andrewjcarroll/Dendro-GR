@@ -643,7 +643,7 @@ namespace bssn
                 sout<<" ,"<<GW::BSSN_GW_L_MODES[i];
             sout<<"}"<<NRM<<std::endl;
 
-            if (bssn::BSSN_ID_TYPE == 7) {  // If Teukolsky print TEUK
+            if (bssn::BSSN_ID_TYPE == 7 || bssn::BSSN_ID_TYPE == 9) {  // If Teukolsky print TEUK
                                             // parameters
                 sout << "//////////////TEUKOLSKY "
                         "PARAMETERS/////////////////////\n"
@@ -797,6 +797,11 @@ namespace bssn
             case 8:
 
                 bssn::SCData(xx_grid, yy_grid, zz_grid, var);
+
+                break;
+
+            case 9:
+                bssn::NLTeukData(xx_grid, yy_grid,zz_grid, var);
 
                 break;
 
@@ -1364,6 +1369,89 @@ namespace bssn
 
 #include "init_data_helpers/Teuk_vars.cpp"
 #include "init_data_helpers/Teukolsky.init.cpp"
+
+        var[VAR::U_ALPHA] = 1.0;
+        var[VAR::U_BETA0] = 0.0;
+        var[VAR::U_BETA1] = 0.0;
+        var[VAR::U_BETA2] = 0.0;
+
+        var[VAR::U_B0] = 0.0;
+        var[VAR::U_B1] = 0.0;
+        var[VAR::U_B2] = 0.0;
+
+        var[VAR::U_GT0] = 0.0;
+        var[VAR::U_GT1] = 0.0;
+        var[VAR::U_GT2] = 0.0;
+
+        var[VAR::U_SYMGT0] = g_xx;
+        var[VAR::U_SYMGT1] = g_xy;
+        var[VAR::U_SYMGT2] = g_xz;
+        var[VAR::U_SYMGT3] = g_yy;
+        var[VAR::U_SYMGT4] = g_yz;
+        var[VAR::U_SYMGT5] = g_zz;
+
+        //	var[VAR::U_G00] = g_xx;
+        //	var[VAR::U_G01] = g_xy;
+        //	var[VAR::U_G02] = g_xz;
+        //	var[VAR::U_G11] = g_yy;
+        //	var[VAR::U_G12] = g_yz;
+        //	var[VAR::U_G22] = g_zz;
+
+        var[VAR::U_SYMAT0] = 0.0;
+        var[VAR::U_SYMAT1] = 0.0;
+        var[VAR::U_SYMAT2] = 0.0;
+        var[VAR::U_SYMAT3] = 0.0;
+        var[VAR::U_SYMAT4] = 0.0;
+        var[VAR::U_SYMAT5] = 0.0;
+
+        var[VAR::U_CHI] = 1.0;
+        var[VAR::U_K] = 0.0;
+        //	var[VAR::U_THETA] = 0.0;
+
+        //	var[VAR::U_FLAG] = 0.0;
+        //	var[VAR::U_TUU00] = 0.0;
+        //	var[VAR::U_TUU01] = 0.0;
+        //	var[VAR::U_TUU02] = 0.0;
+        //	var[VAR::U_TUU03] = 0.0;
+        //	var[VAR::U_TUU11] = 0.0;
+        //	var[VAR::U_TUU12] = 0.0;
+        //	var[VAR::U_TUU13] = 0.0;
+        //	var[VAR::U_TUU22] = 0.0;
+        //	var[VAR::U_TUU23] = 0.0;
+        //	var[VAR::U_TUU33] = 0.0;
+    }
+
+    void NLTeukData(const double xx1, const double yy1, const double zz1,
+                  double* var) {
+        const double xx = GRIDX_TO_X(xx1);
+        const double yy = GRIDY_TO_Y(yy1);
+        const double zz = GRIDZ_TO_Z(zz1);
+
+        // parameters for the BH (mass, location, spin parameter)
+        double M = BH1.getBHMass();
+        double bh1x = BH1.getBHCoordX();
+        double bh1y = BH1.getBHCoordY();
+        double bh1z = BH1.getBHCoordZ();
+        double spin1 = BH1.getBHSpin();
+
+        // coordinates relative to the center of the BH
+        double x = xx - bh1x;
+        double y = yy - bh1y;
+        double z = zz - bh1z;
+
+        // locating as a radial form
+        double r = sqrt(x * x + y * y + z * z);
+
+        // HL : Angular momentum parameter will be added as param file after
+        // testing
+        double a = spin1;
+
+        double gtd[3][3], Atd[3][3];
+        double alpha, Gamt[3];
+        double Chi, TrK, Betau[3];
+
+#include "init_data_helpers/NLTeuk_vars.cpp"
+#include "init_data_helpers/NLTeukolsky.init.cpp"
 
         var[VAR::U_ALPHA] = 1.0;
         var[VAR::U_BETA0] = 0.0;
