@@ -205,8 +205,9 @@ double g_rph;
 double g_thth;
 double g_thph;
 double g_phph;
-double determinant;
+double detg;
 double pi;
+double chi;
 double fr0;
 //-----------------------------------------------------------
 //
@@ -1299,10 +1300,10 @@ if ( rho > 1.0e-7 ) { // everywhere but the axis ...
 }
        
 //Checking to see if the determinant is negative
-determinant = (g_xx*g_yy*g_zz)+(g_xy*g_yz*g_xz)+(g_xz*g_xy*g_yz)-((g_xz*g_yy*g_xz)+(g_yz*g_yz*g_xx)+(g_zz*g_xy*g_xy));
-
-if (determinant<0) {
-	std::cout << "The determinant = " <<determinant<<std::endl;
+detg = (g_xx*g_yy*g_zz)+(g_xy*g_yz*g_xz)+(g_xz*g_xy*g_yz)-((g_xz*g_yy*g_xz)+(g_yz*g_yz*g_xx)+(g_zz*g_xy*g_xy));
+chi = pow(detg,-1/3);
+if (detg<0) {
+	std::cout << "The determinant = " <<detg<<std::endl;
 	std::cout <<" r = "<< rr<<std::endl;
 	std::cout <<" x = "<< xx<<std::endl;
 	std::cout <<" y = "<< yy<<std::endl;
@@ -1364,12 +1365,12 @@ var[VAR::U_GT0] = 0.0;
 var[VAR::U_GT1] = 0.0;
 var[VAR::U_GT2] = 0.0;
 
-var[VAR::U_SYMGT0] = g_xx;
-var[VAR::U_SYMGT1] = g_xy;
-var[VAR::U_SYMGT2] = g_xz;
-var[VAR::U_SYMGT3] = g_yy;
-var[VAR::U_SYMGT4] = g_yz;
-var[VAR::U_SYMGT5] = g_zz;
+var[VAR::U_SYMGT0] = chi*g_xx;
+var[VAR::U_SYMGT1] = chi*g_xy;
+var[VAR::U_SYMGT2] = chi*g_xz;
+var[VAR::U_SYMGT3] = chi*g_yy;
+var[VAR::U_SYMGT4] = chi*g_yz;
+var[VAR::U_SYMGT5] = chi*g_zz;
 
 //	var[VAR::U_G00] = g_xx;
 //	var[VAR::U_G01] = g_xy;
@@ -1385,7 +1386,7 @@ var[VAR::U_SYMAT3] =  0.0;
 var[VAR::U_SYMAT4] =  0.0;
 var[VAR::U_SYMAT5] =  0.0;
 
-var[VAR::U_CHI]   = 1.0;
+var[VAR::U_CHI]   = chi;
 var[VAR::U_K]   = 0.0;
 //	var[VAR::U_THETA] = 0.0;
 

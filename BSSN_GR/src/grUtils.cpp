@@ -1466,12 +1466,12 @@ namespace bssn
         var[VAR::U_GT1] = 0.0;
         var[VAR::U_GT2] = 0.0;
 
-        var[VAR::U_SYMGT0] = g_xx;
-        var[VAR::U_SYMGT1] = g_xy;
-        var[VAR::U_SYMGT2] = g_xz;
-        var[VAR::U_SYMGT3] = g_yy;
-        var[VAR::U_SYMGT4] = g_yz;
-        var[VAR::U_SYMGT5] = g_zz;
+        var[VAR::U_SYMGT0] = chi * g_xx;
+        var[VAR::U_SYMGT1] = chi * g_xy;
+        var[VAR::U_SYMGT2] = chi * g_xz;
+        var[VAR::U_SYMGT3] = chi * g_yy;
+        var[VAR::U_SYMGT4] = chi * g_yz;
+        var[VAR::U_SYMGT5] = chi * g_zz;
 
         //	var[VAR::U_G00] = g_xx;
         //	var[VAR::U_G01] = g_xy;
@@ -1487,7 +1487,7 @@ namespace bssn
         var[VAR::U_SYMAT4] = 0.0;
         var[VAR::U_SYMAT5] = 0.0;
 
-        var[VAR::U_CHI] = 1.0;
+        var[VAR::U_CHI] = chi;
         var[VAR::U_K] = 0.0;
         //	var[VAR::U_THETA] = 0.0;
 
