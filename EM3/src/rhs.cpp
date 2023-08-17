@@ -343,7 +343,7 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
       std::cout <<"BLOCK SIZE " << nx << ' '<< ny <<' '<< nz << std::endl;
     }
     
-
+    if (bflag == 0){
     filter_cfd_x(E0, hx, sz, RF, grad_0_E0, grad_1_E0, bflag);
     filter_cfd_y(E0, hy, sz, RF, grad_0_E0, grad_1_E0, bflag);
     filter_cfd_z(E0, hz, sz, RF, grad_0_E0, grad_1_E0, bflag);
@@ -367,6 +367,7 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
     filter_cfd_x(B2, hx, sz, RF, grad_0_E0, grad_1_E0, bflag);
     filter_cfd_y(B2, hy, sz, RF, grad_0_E0, grad_1_E0, bflag);
     filter_cfd_z(B2, hz, sz, RF, grad_0_E0, grad_1_E0, bflag);
+    }
 
     if (em3::EM3_DERIV_TYPE == 0)
     {
@@ -396,6 +397,7 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
     }
     else if (em3::EM3_DERIV_TYPE == 1)
     {
+        if (bflag == 0){
         cfd_x(grad_0_E0, E0, hx, sz, R, u1d, du1d, bflag);
         cfd_y(grad_1_E0, E0, hy, sz, R, u1d, du1d, bflag);
         cfd_z(grad_2_E0, E0, hz, sz, R, u1d, du1d, bflag);
@@ -419,6 +421,32 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
         cfd_x(grad_0_B2, B2, hx, sz, R, u1d, du1d, bflag);
         cfd_y(grad_1_B2, B2, hy, sz, R, u1d, du1d, bflag);
         cfd_z(grad_2_B2, B2, hz, sz, R, u1d, du1d, bflag);
+        } else {
+            // std::cout << "bflag " << bflag << std::endl;
+        deriv_x(grad_0_E0, E0, hx, sz, bflag);
+        deriv_y(grad_1_E0, E0, hy, sz, bflag);
+        deriv_z(grad_2_E0, E0, hz, sz, bflag);
+
+        deriv_x(grad_0_E1, E1, hx, sz, bflag);
+        deriv_y(grad_1_E1, E1, hy, sz, bflag);
+        deriv_z(grad_2_E1, E1, hz, sz, bflag);
+
+        deriv_x(grad_0_E2, E2, hx, sz, bflag);
+        deriv_y(grad_1_E2, E2, hy, sz, bflag);
+        deriv_z(grad_2_E2, E2, hz, sz, bflag);
+
+        deriv_x(grad_0_B0, B0, hx, sz, bflag);
+        deriv_y(grad_1_B0, B0, hy, sz, bflag);
+        deriv_z(grad_2_B0, B0, hz, sz, bflag);
+
+        deriv_x(grad_0_B1, B1, hx, sz, bflag);
+        deriv_y(grad_1_B1, B1, hy, sz, bflag);
+        deriv_z(grad_2_B1, B1, hz, sz, bflag);
+
+        deriv_x(grad_0_B2, B2, hx, sz, bflag);
+        deriv_y(grad_1_B2, B2, hy, sz, bflag);
+        deriv_z(grad_2_B2, B2, hz, sz, bflag);
+        }
     }
     else if (em3::EM3_DERIV_TYPE == 2)
     {
