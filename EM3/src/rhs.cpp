@@ -338,8 +338,11 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
     const unsigned int PW = em3::EM3_PADDING_WIDTH;
 
     unsigned int size_CFD  = nx;
-
-    //std::cout <<"BLOCK SIZE " << nx << ' '<< ny <<' '<< nz << std::endl;
+    if (nx!=17 || ny!=17 || nz!=17)
+    {
+      std::cout <<"BLOCK SIZE " << nx << ' '<< ny <<' '<< nz << std::endl;
+    }
+    
 
     filter_cfd_x(E0, hx, sz, RF, grad_0_E0, grad_1_E0, bflag);
     filter_cfd_y(E0, hy, sz, RF, grad_0_E0, grad_1_E0, bflag);
