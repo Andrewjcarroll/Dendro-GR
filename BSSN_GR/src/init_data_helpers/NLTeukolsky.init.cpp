@@ -1301,7 +1301,9 @@ if ( rho > 1.0e-7 ) { // everywhere but the axis ...
        
 //Checking to see if the determinant is negative
 detg = (g_xx*g_yy*g_zz)+(g_xy*g_yz*g_xz)+(g_xz*g_xy*g_yz)-((g_xz*g_yy*g_xz)+(g_yz*g_yz*g_xx)+(g_zz*g_xy*g_xy));
-chi = pow(detg,-1/3);
+
+chi = pow(detg,-1.0 / 3.0 );
+
 if (detg<0) {
 	std::cout << "The determinant = " <<detg<<std::endl;
 	std::cout <<" r = "<< rr<<std::endl;
