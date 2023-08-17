@@ -696,7 +696,7 @@ namespace ode
                         ptmax[1]=GRIDY_TO_Y(blkList[blk].getBlockNode().maxY())+PW*dy;
                         ptmax[2]=GRIDZ_TO_Z(blkList[blk].getBlockNode().maxZ())+PW*dz;
 
-                        em3rhs(m_uiUnzipVarRHS, (const double **)m_uiUnzipVar, offset, ptmin, ptmax, sz, bflag);
+                        // em3rhs(m_uiUnzipVarRHS, (const double **)m_uiUnzipVar, offset, ptmin, ptmax, sz, bflag);
 
                           em3rhs_CFD(m_uiUnzipVarRHS, m_uiUnzipVar, offset,
                        ptmin, ptmax, sz, bflag);
@@ -848,7 +848,7 @@ namespace ode
             int dtype = em3::EM3_DERIV_TYPE;
             unsigned int sz2 = 2 * em3::EM3_ELE_ORDER + 1;
             initCompactFD(dtype, sz2);
-
+            std :: cout << "sz2: " << sz2 << std :: endl;
             //Not sure where is the best place to put this yet
             int ftype = em3::EM3_FILTER_TYPE;
             init_filter_CompactFD(ftype, sz2);

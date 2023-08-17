@@ -335,7 +335,11 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
     double *grad_1_B2 = __mem_pool->allocate(n);
     double *grad_2_B2 = __mem_pool->allocate(n);
 
-    // ADD THE FILTERING
+    const unsigned int PW = em3::EM3_PADDING_WIDTH;
+
+    unsigned int size_CFD  = nx;
+
+    //std::cout <<"BLOCK SIZE " << nx << ' '<< ny <<' '<< nz << std::endl;
 
     filter_cfd_x(E0, hx, sz, RF, grad_0_E0, grad_1_E0, bflag);
     filter_cfd_y(E0, hy, sz, RF, grad_0_E0, grad_1_E0, bflag);
@@ -480,7 +484,6 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
 
     double r;
     double eta;
-    const unsigned int PW = em3::EM3_PADDING_WIDTH;
 
     // cout << "begin loop" << endl;
     for (unsigned int k = PW; k < nz - PW; k++)
