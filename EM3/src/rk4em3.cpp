@@ -845,13 +845,22 @@ namespace ode
 
 
             // set up compact finite differences
-            int dtype = em3::EM3_DERIV_TYPE;
+            // int dtype = em3::EM3_DERIV_TYPE;
+            // unsigned int sz2 = 2 * em3::EM3_ELE_ORDER + 1;
+            // initCompactFD(dtype, sz2);
+            // std :: cout << "sz2: " << sz2 << std :: endl;
+            // //Not sure where is the best place to put this yet
+            // int ftype = em3::EM3_FILTER_TYPE;
+            // init_filter_CompactFD(ftype, sz2);
+
+            // set up the actual compact finite difference object for the size
             unsigned int sz2 = 2 * em3::EM3_ELE_ORDER + 1;
-            initCompactFD(dtype, sz2);
-            std :: cout << "sz2: " << sz2 << std :: endl;
-            //Not sure where is the best place to put this yet
-            int ftype = em3::EM3_FILTER_TYPE;
-            init_filter_CompactFD(ftype, sz2);
+            // NOTE: the 
+            dendro_cfd::cfd.set_filter_type(em3::EM3_FILTER_TYPE);
+            dendro_cfd::cfd.set_deriv_type(em3::EM3_DERIV_TYPE);
+            // NOTE: the changing of dim size will reinitialize everything if the size is different
+            // meaning that the main matrix will be recalculated and the filter matrix will be recalculated
+            dendro_cfd::cfd.change_dim_size(sz2);
 
 
             double l_min,l_max;

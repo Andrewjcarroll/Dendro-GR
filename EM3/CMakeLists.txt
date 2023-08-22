@@ -40,6 +40,7 @@ set(EM3_INC include/parameters.h
         include/em3Utils.h
         include/rhs.h
         include/kim.h
+        include/cfd.h
         include/derivs.h
         include/profile_params.h
         include/physcon.h 
@@ -53,6 +54,7 @@ set(EM3_INC include/parameters.h
         src/parameters.cpp
         src/em3Utils.cpp
         src/rhs.cpp
+        src/cfd.cpp
         src/derivs.cpp
         src/kim.cpp
         src/HAMR.cpp
