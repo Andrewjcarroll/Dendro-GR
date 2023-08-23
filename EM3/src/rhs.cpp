@@ -31,7 +31,7 @@ void em3rhs(double **unzipVarsRHS, const double **uZipVars,
     // double *E_Grad_rhs2 = &unzipVarsRHS[VAR::U_Grad_E2][offset];
     mem::memory_pool<DendroScalar> *__mem_pool = &EM3_MEM_POOL;
 
-    double* const deriv_base = em3::EM3_DERIV_WORKSPACE;
+    double *const deriv_base = em3::EM3_DERIV_WORKSPACE;
 
     const unsigned int nx = sz[0];
     const unsigned int ny = sz[1];
@@ -46,7 +46,7 @@ void em3rhs(double **unzipVarsRHS, const double **uZipVars,
     int idx[3];
 
     unsigned int n = sz[0] * sz[1] * sz[2];
-    const unsigned int BLK_SZ=n;
+    const unsigned int BLK_SZ = n;
 
     em3::timer::t_deriv.start();
 
@@ -236,10 +236,9 @@ void em3rhs(double **unzipVarsRHS, const double **uZipVars,
 }
 
 void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
-                const unsigned int &offset, const double *pmin, const double *pmax,
-                const unsigned int *sz, const unsigned int &bflag)
-{
-
+                const unsigned int &offset, const double *pmin,
+                const double *pmax, const unsigned int *sz,
+                const unsigned int &bflag) {
     double *const E0 = &uZipVars[VAR::U_E0][offset];
     double *const E1 = &uZipVars[VAR::U_E1][offset];
     double *const E2 = &uZipVars[VAR::U_E2][offset];
@@ -259,7 +258,7 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
     // double *E_Grad_rhs1 = &unzipVarsRHS[VAR::U_Grad_E1][offset];
     // double *E_Grad_rhs2 = &unzipVarsRHS[VAR::U_Grad_E2][offset];
     mem::memory_pool<DendroScalar> *__mem_pool = &EM3_MEM_POOL;
-    double* const deriv_base = em3::EM3_DERIV_WORKSPACE;
+    double *const deriv_base = em3::EM3_DERIV_WORKSPACE;
 
     const unsigned int nx = sz[0];
     const unsigned int ny = sz[1];
@@ -274,7 +273,7 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
     int idx[3];
 
     unsigned int n = sz[0] * sz[1] * sz[2];
-    const unsigned int BLK_SZ=n;
+    const unsigned int BLK_SZ = n;
 
     // additional variables we need to hold on to
     double *rho_e = __mem_pool->allocate(n);
@@ -283,8 +282,7 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
     double *J1 = __mem_pool->allocate(n);
     double *J2 = __mem_pool->allocate(n);
 
-    for (unsigned int m = 0; m < n; m++)
-    {
+    for (unsigned int m = 0; m < n; m++) {
         rho_e[m] = 0.0;
 
         J0[m] = 0.0;
@@ -318,16 +316,17 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
 
     const unsigned int PW = em3::EM3_PADDING_WIDTH;
 
-    unsigned int size_CFD  = nx;
+    unsigned int size_CFD = nx;
     // if (nx!=17 || ny!=17 || nz!=17)
     // {
     //   std::cout <<"BLOCK SIZE " << nx << ' '<< ny <<' '<< nz << std::endl;
     // }
 
     em3::timer::t_deriv.start();
-    
-    if (bflag == 0){
-        // NOTE: the bflag check here is because we currently can't filter boundaries!
+
+    if (bflag == 0) {
+        // NOTE: the bflag check here is because we currently can't filter
+        // boundaries!
         cfd.filter_cfd_x(E0, hx, sz, bflag);
         cfd.filter_cfd_y(E0, hy, sz, bflag);
         cfd.filter_cfd_z(E0, hz, sz, bflag);
@@ -353,8 +352,7 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
         cfd.filter_cfd_z(B2, hz, sz, bflag);
     }
 
-    if (em3::EM3_DERIV_TYPE == 0)
-    {
+    if (em3::EM3_DERIV_TYPE == 0) {
         deriv_x(grad_0_E0, E0, hx, sz, bflag);
         deriv_y(grad_1_E0, E0, hy, sz, bflag);
         deriv_z(grad_2_E0, E0, hz, sz, bflag);
@@ -378,9 +376,7 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
         deriv_x(grad_0_B2, B2, hx, sz, bflag);
         deriv_y(grad_1_B2, B2, hy, sz, bflag);
         deriv_z(grad_2_B2, B2, hz, sz, bflag);
-    }
-    else if (em3::EM3_DERIV_TYPE == 1)
-    {
+    } else if (em3::EM3_DERIV_TYPE == 1) {
         if (bflag == 0) {
             cfd.cfd_x(grad_0_E0, E0, hx, sz, bflag);
             cfd.cfd_y(grad_1_E0, E0, hy, sz, bflag);
@@ -431,9 +427,7 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
             deriv_y(grad_1_B2, B2, hy, sz, bflag);
             deriv_z(grad_2_B2, B2, hz, sz, bflag);
         }
-    }
-    else if (em3::EM3_DERIV_TYPE == 2)
-    {
+    } else if (em3::EM3_DERIV_TYPE == 2) {
         cfd.cfd_x(grad_0_E0, E0, hx, sz, bflag);
         cfd.cfd_y(grad_1_E0, E0, hy, sz, bflag);
         cfd.cfd_z(grad_2_E0, E0, hz, sz, bflag);
@@ -457,9 +451,7 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
         cfd.cfd_x(grad_0_B2, B2, hx, sz, bflag);
         cfd.cfd_y(grad_1_B2, B2, hy, sz, bflag);
         cfd.cfd_z(grad_2_B2, B2, hz, sz, bflag);
-    }
-    else if (em3::EM3_DERIV_TYPE == 3)
-    {
+    } else if (em3::EM3_DERIV_TYPE == 3) {
         cfd.cfd_x(grad_0_E0, E0, hx, sz, bflag);
         cfd.cfd_y(grad_1_E0, E0, hy, sz, bflag);
         cfd.cfd_z(grad_2_E0, E0, hz, sz, bflag);
@@ -483,9 +475,7 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
         cfd.cfd_x(grad_0_B2, B2, hx, sz, bflag);
         cfd.cfd_y(grad_1_B2, B2, hy, sz, bflag);
         cfd.cfd_z(grad_2_B2, B2, hz, sz, bflag);
-    }
-    else
-    {
+    } else {
         std::cerr << "Unknown value for EM3_DERIV_TYPE = "
                   << em3::EM3_DERIV_TYPE << std::endl;
     }
@@ -501,16 +491,13 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
     double eta;
 
     // cout << "begin loop" << endl;
-    for (unsigned int k = PW; k < nz - PW; k++)
-    {
+    for (unsigned int k = PW; k < nz - PW; k++) {
         z = pmin[2] + k * hz;
 
-        for (unsigned int j = PW; j < ny - PW; j++)
-        {
+        for (unsigned int j = PW; j < ny - PW; j++) {
             y = pmin[1] + j * hy;
 
-            for (unsigned int i = PW; i < nx - PW; i++)
-            {
+            for (unsigned int i = PW; i < nx - PW; i++) {
                 x = pmin[0] + i * hx;
                 pp = i + nx * (j + ny * k);
                 // r= sqrt(x*x + y*y + z*z);
@@ -522,8 +509,7 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
         }
     }
 
-    if (bflag != 0)
-    {
+    if (bflag != 0) {
         em3::timer::t_bdyc.start();
 
         em3_bcs(E_rhs0, E0, grad_0_E0, grad_1_E0, grad_2_E0, pmin, pmax, 2.0,
