@@ -6,8 +6,8 @@ namespace dendro_cfd {
 CompactFiniteDiff cfd(0);
 
 CompactFiniteDiff::CompactFiniteDiff(const unsigned int num_dim,
-                                         const unsigned int deriv_type,
-                                         const unsigned int filter_type) {
+                                     const unsigned int deriv_type,
+                                     const unsigned int filter_type) {
     m_deriv_type = deriv_type;
     m_filter_type = filter_type;
     m_curr_dim_size = num_dim;
@@ -42,10 +42,10 @@ void CompactFiniteDiff::change_dim_size(const unsigned int dim_size) {
 }
 
 void CompactFiniteDiff::initialize_cfd_storage() {
-    m_RF = (double *)malloc(sizeof(double) * m_curr_dim_size * m_curr_dim_size);
-    m_R = (double *)malloc(sizeof(double) * m_curr_dim_size * m_curr_dim_size);
-    m_u1d = (double *)malloc(sizeof(double) * m_curr_dim_size);
-    m_du1d = (double *)malloc(sizeof(double) * m_curr_dim_size);
+    m_RF = new double[m_curr_dim_size * m_curr_dim_size];
+    m_R = new double[m_curr_dim_size * m_curr_dim_size];
+    m_u1d = new double[m_curr_dim_size];
+    m_du1d = new double[m_curr_dim_size];
 }
 
 void CompactFiniteDiff::initialize_cfd_matrix() {
@@ -144,15 +144,15 @@ void CompactFiniteDiff::initialize_cfd_filter() {
 }
 
 void CompactFiniteDiff::delete_cfd_matrices() {
-    free(m_RF);
-    free(m_R);
-    free(m_u1d);
-    free(m_du1d);
+    delete[] m_RF;
+    delete[] m_R;
+    delete[] m_u1d;
+    delete[] m_du1d;
 }
 
 void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
-                                const double dx, const unsigned int *sz,
-                                unsigned bflag) {
+                              const double dx, const unsigned int *sz,
+                              unsigned bflag) {
     const unsigned int nx = sz[0];
     const unsigned int ny = sz[1];
     const unsigned int nz = sz[2];
@@ -184,8 +184,8 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
 }
 
 void CompactFiniteDiff::cfd_y(double *const Dyu, const double *const u,
-                                const double dy, const unsigned int *sz,
-                                unsigned bflag) {
+                              const double dy, const unsigned int *sz,
+                              unsigned bflag) {
     const unsigned int nx = sz[0];
     const unsigned int ny = sz[1];
     const unsigned int nz = sz[2];
@@ -213,8 +213,8 @@ void CompactFiniteDiff::cfd_y(double *const Dyu, const double *const u,
 }
 
 void CompactFiniteDiff::cfd_z(double *const Dzu, const double *const u,
-                                const double dz, const unsigned int *sz,
-                                unsigned bflag) {
+                              const double dz, const unsigned int *sz,
+                              unsigned bflag) {
     const unsigned int nx = sz[0];
     const unsigned int ny = sz[1];
     const unsigned int nz = sz[2];
@@ -242,7 +242,11 @@ void CompactFiniteDiff::cfd_z(double *const Dzu, const double *const u,
 }
 
 void CompactFiniteDiff::filter_cfd_x(double *const u, const double dx,
-                                       const unsigned int *sz, unsigned bflag) {
+                                     const unsigned int *sz, unsigned bflag) {
+    if (m_filter_type == 0) {
+        return;
+    }
+
     const unsigned int nx = sz[0];
     const unsigned int ny = sz[1];
     const unsigned int nz = sz[2];
@@ -269,7 +273,11 @@ void CompactFiniteDiff::filter_cfd_x(double *const u, const double dx,
 }
 
 void CompactFiniteDiff::filter_cfd_y(double *const u, const double dx,
-                                       const unsigned int *sz, unsigned bflag) {
+                                     const unsigned int *sz, unsigned bflag) {
+    if (m_filter_type == 0) {
+        return;
+    }
+
     const unsigned int nx = sz[0];
     const unsigned int ny = sz[1];
     const unsigned int nz = sz[2];
@@ -293,7 +301,11 @@ void CompactFiniteDiff::filter_cfd_y(double *const u, const double dx,
 }
 
 void CompactFiniteDiff::filter_cfd_z(double *const u, const double dz,
-                                       const unsigned int *sz, unsigned bflag) {
+                                     const unsigned int *sz, unsigned bflag) {
+    if (m_filter_type == 0) {
+        return;
+    }
+
     const unsigned int nx = sz[0];
     const unsigned int ny = sz[1];
     const unsigned int nz = sz[2];
