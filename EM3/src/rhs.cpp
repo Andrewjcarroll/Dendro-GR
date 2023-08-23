@@ -31,6 +31,8 @@ void em3rhs(double **unzipVarsRHS, const double **uZipVars,
     // double *E_Grad_rhs2 = &unzipVarsRHS[VAR::U_Grad_E2][offset];
     mem::memory_pool<DendroScalar> *__mem_pool = &EM3_MEM_POOL;
 
+    double* const deriv_base = em3::EM3_DERIV_WORKSPACE;
+
     const unsigned int nx = sz[0];
     const unsigned int ny = sz[1];
     const unsigned int nz = sz[2];
@@ -44,6 +46,7 @@ void em3rhs(double **unzipVarsRHS, const double **uZipVars,
     int idx[3];
 
     unsigned int n = sz[0] * sz[1] * sz[2];
+    const unsigned int BLK_SZ=n;
 
     em3::timer::t_deriv.start();
 
@@ -61,29 +64,29 @@ void em3rhs(double **unzipVarsRHS, const double **uZipVars,
         J2[m] = 0.0;
     }
 
-    double *grad_0_E0 = __mem_pool->allocate(n);
-    double *grad_1_E0 = __mem_pool->allocate(n);
-    double *grad_2_E0 = __mem_pool->allocate(n);
+    double *grad_0_E0 = deriv_base + 0 * BLK_SZ;
+    double *grad_1_E0 = deriv_base + 1 * BLK_SZ;
+    double *grad_2_E0 = deriv_base + 2 * BLK_SZ;
 
-    double *grad_0_E1 = __mem_pool->allocate(n);
-    double *grad_1_E1 = __mem_pool->allocate(n);
-    double *grad_2_E1 = __mem_pool->allocate(n);
+    double *grad_0_E1 = deriv_base + 3 * BLK_SZ;
+    double *grad_1_E1 = deriv_base + 4 * BLK_SZ;
+    double *grad_2_E1 = deriv_base + 5 * BLK_SZ;
 
-    double *grad_0_E2 = __mem_pool->allocate(n);
-    double *grad_1_E2 = __mem_pool->allocate(n);
-    double *grad_2_E2 = __mem_pool->allocate(n);
+    double *grad_0_E2 = deriv_base + 6 * BLK_SZ;
+    double *grad_1_E2 = deriv_base + 7 * BLK_SZ;
+    double *grad_2_E2 = deriv_base + 8 * BLK_SZ;
 
-    double *grad_0_B0 = __mem_pool->allocate(n);
-    double *grad_1_B0 = __mem_pool->allocate(n);
-    double *grad_2_B0 = __mem_pool->allocate(n);
+    double *grad_0_B0 = deriv_base + 9 * BLK_SZ;
+    double *grad_1_B0 = deriv_base + 10 * BLK_SZ;
+    double *grad_2_B0 = deriv_base + 11 * BLK_SZ;
 
-    double *grad_0_B1 = __mem_pool->allocate(n);
-    double *grad_1_B1 = __mem_pool->allocate(n);
-    double *grad_2_B1 = __mem_pool->allocate(n);
+    double *grad_0_B1 = deriv_base + 12 * BLK_SZ;
+    double *grad_1_B1 = deriv_base + 13 * BLK_SZ;
+    double *grad_2_B1 = deriv_base + 14 * BLK_SZ;
 
-    double *grad_0_B2 = __mem_pool->allocate(n);
-    double *grad_1_B2 = __mem_pool->allocate(n);
-    double *grad_2_B2 = __mem_pool->allocate(n);
+    double *grad_0_B2 = deriv_base + 15 * BLK_SZ;
+    double *grad_1_B2 = deriv_base + 16 * BLK_SZ;
+    double *grad_2_B2 = deriv_base + 17 * BLK_SZ;
 
     deriv_x(grad_0_E0, E0, hx, sz, bflag);
     deriv_y(grad_1_E0, E0, hy, sz, bflag);
@@ -217,30 +220,6 @@ void em3rhs(double **unzipVarsRHS, const double **uZipVars,
 
     em3::timer::t_deriv.start();
 
-    __mem_pool->free(grad_0_E0);
-    __mem_pool->free(grad_1_E0);
-    __mem_pool->free(grad_2_E0);
-
-    __mem_pool->free(grad_0_E1);
-    __mem_pool->free(grad_1_E1);
-    __mem_pool->free(grad_2_E1);
-
-    __mem_pool->free(grad_0_E2);
-    __mem_pool->free(grad_1_E2);
-    __mem_pool->free(grad_2_E2);
-
-    __mem_pool->free(grad_0_B0);
-    __mem_pool->free(grad_1_B0);
-    __mem_pool->free(grad_2_B0);
-
-    __mem_pool->free(grad_0_B1);
-    __mem_pool->free(grad_1_B1);
-    __mem_pool->free(grad_2_B1);
-
-    __mem_pool->free(grad_0_B2);
-    __mem_pool->free(grad_1_B2);
-    __mem_pool->free(grad_2_B2);
-
     __mem_pool->free(J0);
     __mem_pool->free(J1);
     __mem_pool->free(J2);
@@ -280,6 +259,7 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
     // double *E_Grad_rhs1 = &unzipVarsRHS[VAR::U_Grad_E1][offset];
     // double *E_Grad_rhs2 = &unzipVarsRHS[VAR::U_Grad_E2][offset];
     mem::memory_pool<DendroScalar> *__mem_pool = &EM3_MEM_POOL;
+    double* const deriv_base = em3::EM3_DERIV_WORKSPACE;
 
     const unsigned int nx = sz[0];
     const unsigned int ny = sz[1];
@@ -294,9 +274,9 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
     int idx[3];
 
     unsigned int n = sz[0] * sz[1] * sz[2];
+    const unsigned int BLK_SZ=n;
 
-    em3::timer::t_deriv.start();
-
+    // additional variables we need to hold on to
     double *rho_e = __mem_pool->allocate(n);
 
     double *J0 = __mem_pool->allocate(n);
@@ -312,29 +292,29 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
         J2[m] = 0.0;
     }
 
-    double *grad_0_E0 = __mem_pool->allocate(n);
-    double *grad_1_E0 = __mem_pool->allocate(n);
-    double *grad_2_E0 = __mem_pool->allocate(n);
+    double *grad_0_E0 = deriv_base + 0 * BLK_SZ;
+    double *grad_1_E0 = deriv_base + 1 * BLK_SZ;
+    double *grad_2_E0 = deriv_base + 2 * BLK_SZ;
 
-    double *grad_0_E1 = __mem_pool->allocate(n);
-    double *grad_1_E1 = __mem_pool->allocate(n);
-    double *grad_2_E1 = __mem_pool->allocate(n);
+    double *grad_0_E1 = deriv_base + 3 * BLK_SZ;
+    double *grad_1_E1 = deriv_base + 4 * BLK_SZ;
+    double *grad_2_E1 = deriv_base + 5 * BLK_SZ;
 
-    double *grad_0_E2 = __mem_pool->allocate(n);
-    double *grad_1_E2 = __mem_pool->allocate(n);
-    double *grad_2_E2 = __mem_pool->allocate(n);
+    double *grad_0_E2 = deriv_base + 6 * BLK_SZ;
+    double *grad_1_E2 = deriv_base + 7 * BLK_SZ;
+    double *grad_2_E2 = deriv_base + 8 * BLK_SZ;
 
-    double *grad_0_B0 = __mem_pool->allocate(n);
-    double *grad_1_B0 = __mem_pool->allocate(n);
-    double *grad_2_B0 = __mem_pool->allocate(n);
+    double *grad_0_B0 = deriv_base + 9 * BLK_SZ;
+    double *grad_1_B0 = deriv_base + 10 * BLK_SZ;
+    double *grad_2_B0 = deriv_base + 11 * BLK_SZ;
 
-    double *grad_0_B1 = __mem_pool->allocate(n);
-    double *grad_1_B1 = __mem_pool->allocate(n);
-    double *grad_2_B1 = __mem_pool->allocate(n);
+    double *grad_0_B1 = deriv_base + 12 * BLK_SZ;
+    double *grad_1_B1 = deriv_base + 13 * BLK_SZ;
+    double *grad_2_B1 = deriv_base + 14 * BLK_SZ;
 
-    double *grad_0_B2 = __mem_pool->allocate(n);
-    double *grad_1_B2 = __mem_pool->allocate(n);
-    double *grad_2_B2 = __mem_pool->allocate(n);
+    double *grad_0_B2 = deriv_base + 15 * BLK_SZ;
+    double *grad_1_B2 = deriv_base + 16 * BLK_SZ;
+    double *grad_2_B2 = deriv_base + 17 * BLK_SZ;
 
     const unsigned int PW = em3::EM3_PADDING_WIDTH;
 
@@ -343,6 +323,8 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
     // {
     //   std::cout <<"BLOCK SIZE " << nx << ' '<< ny <<' '<< nz << std::endl;
     // }
+
+    em3::timer::t_deriv.start();
     
     if (bflag == 0){
         // NOTE: the bflag check here is because we currently can't filter boundaries!
@@ -562,30 +544,6 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
     }
 
     em3::timer::t_deriv.start();
-
-    __mem_pool->free(grad_0_E0);
-    __mem_pool->free(grad_1_E0);
-    __mem_pool->free(grad_2_E0);
-
-    __mem_pool->free(grad_0_E1);
-    __mem_pool->free(grad_1_E1);
-    __mem_pool->free(grad_2_E1);
-
-    __mem_pool->free(grad_0_E2);
-    __mem_pool->free(grad_1_E2);
-    __mem_pool->free(grad_2_E2);
-
-    __mem_pool->free(grad_0_B0);
-    __mem_pool->free(grad_1_B0);
-    __mem_pool->free(grad_2_B0);
-
-    __mem_pool->free(grad_0_B1);
-    __mem_pool->free(grad_1_B1);
-    __mem_pool->free(grad_2_B1);
-
-    __mem_pool->free(grad_0_B2);
-    __mem_pool->free(grad_1_B2);
-    __mem_pool->free(grad_2_B2);
 
     __mem_pool->free(J0);
     __mem_pool->free(J1);

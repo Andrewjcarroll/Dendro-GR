@@ -118,4 +118,6 @@ namespace em3
 
     bool EM3_VTU_Z_SLICE_ONLY = true; 
 
+    double * EM3_DERIV_WORKSPACE = nullptr;
+
 }

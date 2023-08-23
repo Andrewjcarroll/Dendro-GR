@@ -323,6 +323,10 @@ namespace em3
     extern unsigned int EM3_FILTER_TYPE;
 
 
+    extern double* EM3_DERIV_WORKSPACE;
+
+    const unsigned int EM3_NUM_DERIVS = 18;
+
 }
 
 

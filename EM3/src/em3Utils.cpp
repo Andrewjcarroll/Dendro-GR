@@ -713,6 +713,38 @@ namespace em3
         return (1u<<(3*pNode->getLevel()))*1;
     }
 
+    void allocate_em3_deriv_workspace(const ot::Mesh* pMesh,
+                                      unsigned int s_fac) {
+        deallocate_em3_deriv_workspace();
+
+        if (!pMesh->isActive()) return;
+
+        // gets the largest block size.
+        const std::vector<ot::Block>& blkList = pMesh->getLocalBlockList();
+        unsigned int max_blk_sz = 0;
+        for (unsigned int i = 0; i < blkList.size(); i++) {
+            unsigned int blk_sz = blkList[i].getAllocationSzX() *
+                                  blkList[i].getAllocationSzY() *
+                                  blkList[i].getAllocationSzZ();
+            if (blk_sz > max_blk_sz) max_blk_sz = blk_sz;
+        }
+
+        if (em3::EM3_DERIV_WORKSPACE != nullptr) {
+            delete[] em3::EM3_DERIV_WORKSPACE;
+            em3::EM3_DERIV_WORKSPACE = nullptr;
+        }
+
+        em3::EM3_DERIV_WORKSPACE =
+            new double[s_fac * max_blk_sz * em3::EM3_NUM_DERIVS];
+    }
+
+    void deallocate_em3_deriv_workspace() {
+        if (em3::EM3_DERIV_WORKSPACE != nullptr) {
+            delete[] em3::EM3_DERIV_WORKSPACE;
+            em3::EM3_DERIV_WORKSPACE = nullptr;
+        }
+    }
+
 }// end of namespace em3
 
 

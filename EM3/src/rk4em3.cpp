@@ -111,6 +111,10 @@ namespace ode
 
             }
 
+            // allocate and deallocate the derivatives
+            em3::deallocate_em3_deriv_workspace();
+            em3::allocate_em3_deriv_workspace(m_uiMesh,1);
+
 
         }
 
@@ -180,7 +184,7 @@ namespace ode
             delete [] m_uiRecvSts;
 
 
-
+            em3::deallocate_em3_deriv_workspace();
         }
 
         void RK4_EM3::applyInitialConditions(double** zipIn)
@@ -359,6 +363,9 @@ namespace ode
 
             }while(isRefine && (newElements_g!=oldElements_g));
 
+
+            em3::deallocate_em3_deriv_workspace();
+            em3::allocate_em3_deriv_workspace(m_uiMesh,1);
 
         }
 
@@ -1098,6 +1105,9 @@ namespace ode
                         if(m_uiCurrentStep==0)
                          applyInitialConditions(m_uiPrevVar);
 
+                        em3::deallocate_em3_deriv_workspace();
+                        em3::allocate_em3_deriv_workspace(m_uiMesh,1);
+
                         unsigned int lmin,lmax;
                         m_uiMesh->computeMinMaxLevel(lmin,lmax);
                         em3::EM3_RK45_TIME_STEP_SIZE=em3::EM3_CFL_FACTOR*((em3::EM3_COMPD_MAX[0]-em3::EM3_COMPD_MIN[0])*((1u<<(m_uiMaxDepth-lmax))/((double) em3::EM3_ELE_ORDER))/((double)(1u<<(m_uiMaxDepth))));
@@ -1455,6 +1465,11 @@ namespace ode
 
                 std::swap(m_uiMesh,newMesh);
                 delete newMesh;
+
+
+                em3::deallocate_em3_deriv_workspace();
+                em3::allocate_em3_deriv_workspace(m_uiMesh,1);
+
                 reallocateMPIResources();
                 if(restoreStatusGlobal==0) break;
 
