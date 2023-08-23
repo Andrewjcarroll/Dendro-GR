@@ -200,6 +200,14 @@ void bssnrhs(double **unzipVarsRHS, const double **uZipVars,
                 const double arg = - w*w*w*w;
                 const double eta = (bssn::RIT_ETA_CENTRAL - bssn::RIT_ETA_OUTER)*exp(arg) + bssn::RIT_ETA_OUTER;
 
+                 if ((x > -0.0001 && x < 0.0001) && (y > -0.0001 && y < 0.0001) && (z > -0.0001 && z < 0.0001)) {
+                    std::cout << "  [originUpdate] - Alpha at (" << x << ", "
+                              << y << ", " << z << ") : " << alpha[pp]
+                              << "  - step: " << bssn::BSSN_CURRENT_RK_STEP
+                              << " (t = " << bssn::BSSN_CURRENT_RK_COORD_TIME
+                              << ")" << std::endl;
+                }
+
                 #ifdef USE_ROCHESTER_GAUGE
                     #pragma message("BSSN: using rochester gauge")
                     #ifdef USE_ETA_FUNC
@@ -560,6 +568,8 @@ void max_spacetime_speeds(
                 lambda1max[pp] = std::max( abs(-beta1[pp] + t1), abs(-beta1[pp] - t1) );
                 lambda2max[pp] = std::max( abs(-beta2[pp] + t2), abs(-beta2[pp] - t2) );
                 lambda3max[pp] = std::max( abs(-beta3[pp] + t3), abs(-beta3[pp] - t3) );
+
+                
             }
         }
     }
