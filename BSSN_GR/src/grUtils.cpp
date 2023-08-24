@@ -1453,55 +1453,7 @@ namespace bssn
 #include "init_data_helpers/NLTeuk_vars.cpp"
 #include "init_data_helpers/NLTeukolsky.init.cpp"
 
-        var[VAR::U_ALPHA] = 1.0;
-        var[VAR::U_BETA0] = 0.0;
-        var[VAR::U_BETA1] = 0.0;
-        var[VAR::U_BETA2] = 0.0;
 
-        var[VAR::U_B0] = 0.0;
-        var[VAR::U_B1] = 0.0;
-        var[VAR::U_B2] = 0.0;
-
-        var[VAR::U_GT0] = 0.0;
-        var[VAR::U_GT1] = 0.0;
-        var[VAR::U_GT2] = 0.0;
-
-        var[VAR::U_SYMGT0] = chi * g_xx;
-        var[VAR::U_SYMGT1] = chi * g_xy;
-        var[VAR::U_SYMGT2] = chi * g_xz;
-        var[VAR::U_SYMGT3] = chi * g_yy;
-        var[VAR::U_SYMGT4] = chi * g_yz;
-        var[VAR::U_SYMGT5] = chi * g_zz;
-
-        //	var[VAR::U_G00] = g_xx;
-        //	var[VAR::U_G01] = g_xy;
-        //	var[VAR::U_G02] = g_xz;
-        //	var[VAR::U_G11] = g_yy;
-        //	var[VAR::U_G12] = g_yz;
-        //	var[VAR::U_G22] = g_zz;
-
-        var[VAR::U_SYMAT0] = 0.0;
-        var[VAR::U_SYMAT1] = 0.0;
-        var[VAR::U_SYMAT2] = 0.0;
-        var[VAR::U_SYMAT3] = 0.0;
-        var[VAR::U_SYMAT4] = 0.0;
-        var[VAR::U_SYMAT5] = 0.0;
-
-        var[VAR::U_CHI] = chi;
-        var[VAR::U_K] = 0.0;
-        //	var[VAR::U_THETA] = 0.0;
-
-        //	var[VAR::U_FLAG] = 0.0;
-        //	var[VAR::U_TUU00] = 0.0;
-        //	var[VAR::U_TUU01] = 0.0;
-        //	var[VAR::U_TUU02] = 0.0;
-        //	var[VAR::U_TUU03] = 0.0;
-        //	var[VAR::U_TUU11] = 0.0;
-        //	var[VAR::U_TUU12] = 0.0;
-        //	var[VAR::U_TUU13] = 0.0;
-        //	var[VAR::U_TUU22] = 0.0;
-        //	var[VAR::U_TUU23] = 0.0;
-        //	var[VAR::U_TUU33] = 0.0;
     }
 
     void noiseData(const double xx1,const double yy1,const double zz1, double *var)
