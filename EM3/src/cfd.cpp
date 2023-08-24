@@ -165,14 +165,15 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
 
     for (unsigned int k = 0; k < nz; k++) {
         for (unsigned int j = 0; j < ny; j++) {
-            for (unsigned int i = 0; i < nx; i++) {
-                m_u1d[i] = u[IDX(i, j, k)];
-            }
+            // for (unsigned int i = 0; i < nx; i++) {
+            //     m_u1d[i] = u[IDX(i, j, k)];
+            // }
 
             for (unsigned int i = 0; i < nx; i++) {
                 m_du1d[i] = 0.0;
                 for (unsigned int m = 0; m < nx; m++) {
-                    m_du1d[i] += m_R[i * nx + m] * m_u1d[m];
+                    // m_du1d[i] += m_R[i * nx + m] * m_u1d[m];
+                    m_du1d[i] += m_R[i * nx + m] * u[IDX(m, j, k)];
                 }
             }
 
@@ -196,15 +197,18 @@ void CompactFiniteDiff::cfd_y(double *const Dyu, const double *const u,
 
     for (unsigned int k = 0; k < nz; k++) {
         for (unsigned int i = 0; i < nx; i++) {
-            for (unsigned int j = 0; j < ny; j++) {
-                m_u1d[j] = u[IDX(i, j, k)];
-            }
+            // for (unsigned int j = 0; j < ny; j++) {
+            //     m_u1d[j] = u[IDX(i, j, k)];
+            // }
+
             for (unsigned int j = 0; j < ny; j++) {
                 m_du1d[j] = 0.0;
                 for (unsigned int m = 0; m < ny; m++) {
-                    m_du1d[j] += m_R[j * ny + m] * m_u1d[m];
+                    // m_du1d[j] += m_R[j * ny + m] * m_u1d[m];
+                    m_du1d[j] += m_R[j * ny + m] * u[IDX(i, m, k)];
                 }
             }
+
             for (unsigned int j = 0; j < ny; j++) {
                 Dyu[IDX(i, j, k)] = m_du1d[j] / dy;
             }
@@ -225,15 +229,18 @@ void CompactFiniteDiff::cfd_z(double *const Dzu, const double *const u,
 
     for (unsigned int j = 0; j < ny; j++) {
         for (unsigned int i = 0; i < nx; i++) {
-            for (unsigned int k = 0; k < nz; k++) {
-                m_u1d[k] = u[IDX(i, j, k)];
-            }
+            // for (unsigned int k = 0; k < nz; k++) {
+            //     m_u1d[k] = u[IDX(i, j, k)];
+            // }
+
             for (unsigned int k = 0; k < nz; k++) {
                 m_du1d[k] = 0.0;
                 for (unsigned int m = 0; m < nz; m++) {
-                    m_du1d[k] += m_R[k * nz + m] * m_u1d[m];
+                    // m_du1d[k] += m_R[k * nz + m] * m_u1d[m];
+                    m_du1d[k] += m_R[k * nz + m] * u[IDX(i, j, m)];
                 }
             }
+
             for (unsigned int k = 0; k < nz; k++) {
                 Dzu[IDX(i, j, k)] = m_du1d[k] / dz;
             }
