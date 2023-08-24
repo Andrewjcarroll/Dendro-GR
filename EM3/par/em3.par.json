@@ -45,7 +45,7 @@
                 "           " : "dimensionality of the octree, (meshing is supported only for 3D)",
                 "EM3_DIM": 3,
                 "           " : "maximum level of refinement of the mesh",
-                "EM3_MAXDEPTH": 8,
+                "EM3_MAXDEPTH": 7,
         "__comment__" : "=======================================================",
     
     
@@ -70,7 +70,7 @@
                 "           " : "simulation time end",
                 "EM3_RK45_TIME_END": 100,
                 "           " : "CFL factor",
-                "EM3_CFL_FACTOR":0.25,
+                "EM3_CFL_FACTOR":0.1,
                 "           " : "RK method to use (0--RK3, 1--RK4, 2--RK45)",
                 "EM3_RK_TYPE": 0,
                 "           " : "prefered time step size (this is overwritten with the specified CFL factor, not recommend to use this)",
@@ -80,9 +80,9 @@
                 "           " : "Kreiss-Oliger dissipation",
                 "KO_DISS_SIGMA": 4e-1,
                 "           " : "Derivative type. 0-std FD, 1-Kim CFD, 2-HAMR",
-                "EM3_DERIV_TYPE": 1,
+                "EM3_DERIV_TYPE": 0,
                 "           " : "Filter type. 0-std FD, 1-Kim",
-                "EM3_FILTER_TYPE": 1,
+                "EM3_FILTER_TYPE": 0,
     
         "__comment__" : "=======================================================",
     

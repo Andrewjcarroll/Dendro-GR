@@ -4,7 +4,7 @@
 
 #include "HAMR.h"
 #include "JTP6.h"
-#include "TreeNode.h"
+#include "dendro.h"
 #include "kim.h"
 #include "kim_filter.h"
 

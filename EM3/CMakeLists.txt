@@ -84,6 +84,27 @@ endif()
 target_link_libraries(em3Solver dendro5 ${LAPACK_LIBRARIES} ${MPI_LIBRARIES} m)
 
 
+set(DERIV_TEST_SRC src/cfd.cpp
+        src/derivs.cpp
+        src/kim.cpp
+        src/HAMR.cpp
+        src/JTP6.cpp
+        src/kim_filter.cpp)
+
+set(DERIV_TEST_INC include/rhs.h
+        include/kim.h
+        include/cfd.h
+        include/JTP6.h
+        include/HAMR.h
+        include/kim_filter.h)
+
+set(SOURCE_FILES src/test_cfd_profiling.cpp ${DERIV_TEST_INC} ${DERIV_TEST_SRC})
+add_executable(derivTesting ${SOURCE_FILES})
+target_include_directories(derivTesting PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(derivTesting PRIVATE ${CMAKE_SOURCE_DIR}/dendrolib/include)
+target_include_directories(derivTesting PRIVATE ${GSL_INCLUDE_DIRS})
+target_link_libraries(derivTesting dendro5 ${LAPACK_LIBRARIES} ${MPI_LIBRARIES} m)
+
 
 # set(SOURCE_FILES src/em3_lts.cpp  include/em3.h ${EM3_INC} ${EM3_SRC})
 # add_executable(em3SolverNUTS ${SOURCE_FILES})
