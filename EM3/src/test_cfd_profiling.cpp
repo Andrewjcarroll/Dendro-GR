@@ -1,5 +1,3 @@
-
-
 #include <iostream>
 #include <tuple>
 #include <vector>
@@ -9,19 +7,17 @@
 
 #define UNIFORM_RAND_0_TO_X(X) ((double_t)rand() / (double_t)RAND_MAX * X)
 
-
 namespace helpers {
-    uint32_t padding;
+uint32_t padding;
 }
 
-
-void sine_init(double_t *u_var, const uint32_t *sz) {
+void sine_init(double_t *u_var, const uint32_t *sz, const double_t *deltas) {
     const double_t x_start = 0.0;
     const double_t y_start = 0.0;
     const double_t z_start = 0.0;
-    const double_t dx = 0.1;
-    const double_t dy = 0.1;
-    const double_t dz = 0.1;
+    const double_t dx = deltas[0];
+    const double_t dy = deltas[1];
+    const double_t dz = deltas[2];
 
     const double_t amplitude = 0.01;
 
@@ -35,13 +31,13 @@ void sine_init(double_t *u_var, const uint32_t *sz) {
             double_t y = y_start + j * dy;
             for (uint16_t i = 0; i < nx; i++) {
                 double x = x_start + i * dx;
-                u_var[IDX(i, j, k)] =
-                    1.0 * sin(2 * x + 0.1) + 2.0 * sin(3 * y - 0.1) + 0.5 * sin(0.5 * z);
+                u_var[IDX(i, j, k)] = 1.0 * sin(2 * x + 0.1) +
+                                      2.0 * sin(3 * y - 0.1) +
+                                      0.5 * sin(0.5 * z);
             }
         }
     }
 }
-
 
 void random_init(double_t *u_var, const uint32_t *sz) {
     const double_t amplitude = 0.001;
@@ -74,7 +70,8 @@ void zero_init(double_t *u_var, const uint32_t *sz) {
     }
 }
 
-void init_data(const uint32_t init_type, double_t *u_var, const uint32_t *sz) {
+void init_data(const uint32_t init_type, double_t *u_var, const uint32_t *sz,
+               const double *deltas) {
     switch (init_type) {
         case 0:
             zero_init(u_var, sz);
@@ -85,11 +82,12 @@ void init_data(const uint32_t init_type, double_t *u_var, const uint32_t *sz) {
             break;
 
         case 2:
-            sine_init(u_var, sz);
+            sine_init(u_var, sz, deltas);
             break;
 
         default:
-            std::cout << "UNRECOGNIZED INITIAL DATA FUNCTION... EXITING" << std::endl;
+            std::cout << "UNRECOGNIZED INITIAL DATA FUNCTION... EXITING"
+                      << std::endl;
             exit(0);
             break;
     }
@@ -110,14 +108,38 @@ void print_3d_mat(double_t *u_var, const uint32_t *sz) {
     }
 }
 
-std::tuple<double_t, double_t, double_t> calculate_mse(double_t *const x,
-                                                       double_t *const y,
-                                                       const uint32_t *sz, bool skip_pading = true) {
+// void print_square_mat(double *m, const uint32_t n) {
+//     // assumes "col" order in memory
+//     // J is the row!
+//     for (uint16_t i = 0; i < n; i++) {
+//         printf("%3d : ", i);
+//         // I is the column!
+//         for (uint16_t j = 0; j < n; j++) {
+//             printf("%8.3f ", m[INDEX_2D(i, j)]);
+//         }
+//         printf("\n");
+//     }
+// }
+
+void print_square_mat_flat(double *m, const uint32_t n) {
+    uint16_t j_count = 0;
+    for (uint16_t i = 0; i < n * n; i++) {
+        if (i % n == 0) {
+            j_count++;
+            printf("\n");
+        }
+        printf("%8.3f ", m[i]);
+    }
+}
+
+std::tuple<double_t, double_t, double_t> calculate_mse(
+    double_t *const x, double_t *const y, const uint32_t *sz,
+    bool skip_pading = true) {
     // required for IDX function...
     const unsigned int nx = sz[0];
     const unsigned int ny = sz[1];
     const unsigned int nz = sz[2];
-    
+
     double_t max_err = 0.0;
     double_t min_err = __DBL_MAX__;
     double_t mse = 0.0;
@@ -132,7 +154,8 @@ std::tuple<double_t, double_t, double_t> calculate_mse(double_t *const x,
 
     std::cout << i_start << " " << i_end << std::endl;
 
-    const uint32_t total_points = (i_end - i_start) * (j_end - j_start) * (k_end - k_start);
+    const uint32_t total_points =
+        (i_end - i_start) * (j_end - j_start) * (k_end - k_start);
 
     std::cout << total_points << std::endl;
 
@@ -221,8 +244,9 @@ int main(int argc, char **argv) {
         std::cout << "If you wish to change the default parameters pass them "
                      "as command line arguments:"
                   << std::endl;
-        std::cout << "<eleorder> <deriv_type> <filter_type> <num_tests> <data_init>"
-                  << std::endl;
+        std::cout
+            << "<eleorder> <deriv_type> <filter_type> <num_tests> <data_init>"
+            << std::endl;
     }
 
     if (argc > 1) {
@@ -245,8 +269,6 @@ int main(int argc, char **argv) {
     }
     helpers::padding = eleorder >> 1u;
 
-
-
     std::cout << YLW
               << "Will run with the following user parameters:" << std::endl;
     std::cout << "    eleorder    -> " << eleorder << std::endl;
@@ -254,7 +276,8 @@ int main(int argc, char **argv) {
     std::cout << "    filter_type -> " << filter_type << std::endl;
     std::cout << "    num_tests   -> " << num_tests << std::endl;
     std::cout << "    data_init   -> " << data_init << std::endl;
-    std::cout << "    INFO: padding is " << helpers::padding << NRM << std::endl;
+    std::cout << "    INFO: padding is " << helpers::padding << NRM
+              << std::endl;
 
     // the size in each dimension
     uint32_t fullwidth = 2 * eleorder + 1;
@@ -264,18 +287,44 @@ int main(int argc, char **argv) {
 
     double_t *u_var = new double_t[sz[0] * sz[1] * sz[2]];
 
-    double_t deltas[3] = {0.01, 0.01, 0.01};
+    double_t deltas[3] = {0.001, 0.001, 0.001};
 
-    init_data(data_init, u_var, sz);
+    init_data(data_init, u_var, sz, deltas);
 
     // print_3d_mat(u_var, fullwidth, fullwidth, fullwidth);
 
     // build up the cfd object
-    dendro_cfd::CompactFiniteDiff cfd(fullwidth, deriv_type, filter_type);
+    dendro_cfd::CompactFiniteDiff cfd(fullwidth, helpers::padding, deriv_type,
+                                      filter_type);
 
     // run a short test to see what the errors are
     test_cfd_with_original_stencil((double_t *const)u_var, sz, deltas, &cfd);
 
+    double *P = new double[fullwidth * fullwidth]();
+    double *Q = new double[fullwidth * fullwidth]();
+
+    dendro_cfd::buildPandQMatrices(P, Q, helpers::padding, fullwidth,
+                              dendro_cfd::CFD_Q1_O6_ETA1, true, true);
+
+    std::cout << "P matrix: " << std::endl;
+    dendro_cfd::print_square_mat(P, fullwidth);
+
+    // print_square_mat_flat(P, fullwidth);
+
+    std::cout << std::endl << "Q matrix: " << std::endl;
+    dendro_cfd::print_square_mat(Q, fullwidth);
+
+
+    double *Dmat = new double[fullwidth * fullwidth]();
+
+    dendro_cfd::calculateDerivMatrix(Dmat, P, Q, fullwidth);
+
+    std::cout << std::endl << "Dmat matrix: " << std::endl;
+    dendro_cfd::print_square_mat(Dmat, fullwidth);
+
+    delete[] P;
+    delete[] Q;
+    delete[] Dmat;
     // var cleanup
     delete[] u_var;
 }
