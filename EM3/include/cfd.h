@@ -216,7 +216,7 @@ class CompactFiniteDiff {
 
     // storing the derivative and filter types internally
     // could just be the parameter types
-    unsigned int m_deriv_type = 0;
+    DerType m_deriv_type = CFD_KIM_O4;
     unsigned int m_filter_type = 0;
     unsigned int m_curr_dim_size = 0;
     unsigned int m_padding_size = 0;
@@ -224,7 +224,7 @@ class CompactFiniteDiff {
    public:
     CompactFiniteDiff(const unsigned int dim_size,
                       const unsigned int padding_size,
-                      const unsigned int deriv_type = 0,
+                      const DerType deriv_type = CFD_KIM_O4,
                       const unsigned int filter_type = 0);
     ~CompactFiniteDiff();
 
@@ -239,7 +239,7 @@ class CompactFiniteDiff {
         m_filter_type = filter_type;
     }
 
-    void set_deriv_type(const unsigned int deriv_type) {
+    void set_deriv_type(const DerType deriv_type) {
         m_deriv_type = deriv_type;
     }
 

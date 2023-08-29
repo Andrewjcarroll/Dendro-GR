@@ -7,7 +7,7 @@ CompactFiniteDiff cfd(0, 0);
 
 CompactFiniteDiff::CompactFiniteDiff(const unsigned int num_dim,
                                      const unsigned int padding_size,
-                                     const unsigned int deriv_type,
+                                     const DerType deriv_type,
                                      const unsigned int filter_type) {
     m_deriv_type = deriv_type;
     m_filter_type = filter_type;
@@ -61,44 +61,26 @@ void CompactFiniteDiff::initialize_cfd_storage() {
 }
 
 void CompactFiniteDiff::initialize_cfd_matrix() {
-    switch (m_deriv_type) {
-        case 0:
-            break;
-        case 1:
-            if (initKimDeriv4(m_R, m_curr_dim_size)) {
-                // failed to initialize...
-                std::cerr << RED
-                          << "ERROR: could not construct the Kim Deriv4 matrix!"
-                          << std::endl;
-                exit(0);
-            }
-            break;
-        case 2:
-            if (initHAMRDeriv4(m_R, m_curr_dim_size)) {
-                // failed to initialize
-                std::cerr
-                    << RED
-                    << "ERROR: could not construct the HAMR Deriv4 matrix!"
-                    << std::endl;
-                exit(0);
-            }
-            break;
-        case 3:
-            if (initJTPDeriv6(m_R, m_curr_dim_size)) {
-                // failed to initialize again
-                std::cerr << RED
-                          << "ERROR: could not construct the JTP Deriv6 matrix!"
-                          << std::endl;
-                exit(0);
-            }
+    // temporary P and Q storage used in calculations
+    double* P = new double[m_curr_dim_size * m_curr_dim_size]();
+    double* Q = new double[m_curr_dim_size * m_curr_dim_size]();
 
-        default:
-            // do exit
-            std::cerr << RED << "ERROR: Unknown CFD derivative type of "
-                      << m_deriv_type << ". Exiting..." << std::endl;
-            exit(0);
-            break;
-    }
+    // TODO: need to build up the other three combinations (the last one is likely never going to happen)
+    buildPandQMatrices(P, Q, m_padding_size, m_curr_dim_size, m_deriv_type, false, false);
+
+    std::cout << "\nP MATRIX" << std::endl;
+    print_square_mat(P, m_curr_dim_size);
+
+    std::cout << "\nQ MATRIX" << std::endl;
+    print_square_mat(Q, m_curr_dim_size);
+
+    calculateDerivMatrix(m_R, P, Q, m_curr_dim_size);
+
+    std::cout << "\nDERIV MATRIX" << std::endl;
+    print_square_mat(m_R, m_curr_dim_size);
+
+    delete[] P;
+    delete[] Q;
 
     // // Print the R matrix
     // MPI_Comm comm = MPI_COMM_WORLD;
@@ -106,17 +88,17 @@ void CompactFiniteDiff::initialize_cfd_matrix() {
     // int rank, npes;
     // MPI_Comm_rank(comm, &rank);
     // MPI_Comm_size(comm, &npes);
-    int rank = 0;
+//     int rank = 0;
 
-    if (rank == 0) {
-        printf("R matrix:\n");
-        for (unsigned int k = 0; k < m_curr_dim_size; k++) {
-            for (unsigned int m = 0; m < m_curr_dim_size; m++) {
-                printf("%f ", m_R[k * m_curr_dim_size + m]);
-            }
-            printf("\n");
-        }
-    }
+//     if (rank == 0) {
+//         printf("R matrix:\n");
+//         for (unsigned int k = 0; k < m_curr_dim_size; k++) {
+//             for (unsigned int m = 0; m < m_curr_dim_size; m++) {
+//                 printf("%f ", m_R[k * m_curr_dim_size + m]);
+//             }
+//             printf("\n");
+//         }
+//     }
 }
 
 void CompactFiniteDiff::initialize_cfd_filter() {
@@ -450,73 +432,116 @@ void buildPandQMatrices(double *P, double *Q, const uint32_t padding,
         tempQ = Q;
     }
 
-    // NOTE: this is only for the NONISOTROPIC matrices!!!
-    // TODO: add in a check for the isotropic types
+    if (derivtype == CFD_P1_O4 || derivtype == CFD_P1_O6 ||
+        derivtype == CFD_Q1_O6_ETA1) {
+        // NOTE: this is only for the NONISOTROPIC matrices!!!
 
-    // now build up the method object that will be used to calculate the
-    // in-between values
-    CFDMethod method(derivtype);
+        // now build up the method object that will be used to calculate the
+        // in-between values
+        CFDMethod method(derivtype);
 
-    int ibgn = 0;
-    int iend = 0;
+        int ibgn = 0;
+        int iend = 0;
 
-    DerType leftEdgeDtype;
-    DerType rightEdgeDtype;
+        DerType leftEdgeDtype;
+        DerType rightEdgeDtype;
 
-    if (is_left_edge) {
-        leftEdgeDtype =
-            getDerTypeForEdges(derivtype, BoundaryType::BLOCK_PHYS_BOUNDARY);
-    } else {
-        // TODO: update the boundary type based on what we want to build in
-        leftEdgeDtype =
-            getDerTypeForEdges(derivtype, BoundaryType::BLOCK_CFD_DIRICHLET);
-    }
-
-    if (is_right_edge) {
-        rightEdgeDtype =
-            getDerTypeForEdges(derivtype, BoundaryType::BLOCK_PHYS_BOUNDARY);
-    } else {
-        // TODO: update the boundary type based on what we want to build in
-        rightEdgeDtype =
-            getDerTypeForEdges(derivtype, BoundaryType::BLOCK_CFD_DIRICHLET);
-    }
-
-    std::cout << "Left edge is " << leftEdgeDtype << std::endl;
-
-    buildMatrixLeft(tempP, tempQ, &ibgn, leftEdgeDtype, padding, curr_n);
-    buildMatrixRight(tempP, tempQ, &iend, rightEdgeDtype, padding, curr_n);
-
-    for (int i = ibgn; i <= iend; i++) {
-        for (int k = -method.Ld; k <= method.Rd; k++) {
-            if (!(i > -1) && !(i < curr_n)) {
-                throw std::out_of_range(
-                    "I is either less than zero or greater than curr_n! i=" +
-                    std::to_string(i) + " curr_n=" + std::to_string(curr_n));
-            }
-            if (!((i + k) > -1) && !((i + k) < curr_n)) {
-                throw std::out_of_range(
-                    "i + k is either less than 1 or greater than curr_n! i=" +
-                    std::to_string(i + k) + " k=" + std::to_string(k) +
-                    " curr_n=" + std::to_string(curr_n));
-            }
-
-            tempP[INDEX_N2D(i, i + k, curr_n)] = method.alpha[k + method.Ld];
+        if (is_left_edge) {
+            leftEdgeDtype = getDerTypeForEdges(
+                derivtype, BoundaryType::BLOCK_PHYS_BOUNDARY);
+        } else {
+            // TODO: update the boundary type based on what we want to build in
+            leftEdgeDtype = getDerTypeForEdges(
+                derivtype, BoundaryType::BLOCK_CFD_DIRICHLET);
         }
-        for (int k = -method.Lf; k <= method.Rf; k++) {
-            if (!(i > -1) && !(i < curr_n)) {
-                throw std::out_of_range(
-                    "(i is either less than zero or greater than curr_n! i=" +
-                    std::to_string(i) + " curr_n=" + std::to_string(curr_n));
-            }
-            if (!((i + k) > -1) && !((i + k) < curr_n)) {
-                throw std::out_of_range(
-                    "i + k is either less than 1 or greater than curr_n! i=" +
-                    std::to_string(i + k) + " k=" + std::to_string(k) +
-                    " curr_n=" + std::to_string(curr_n));
-            }
 
-            tempQ[INDEX_N2D(i, i + k, curr_n)] = method.a[k + method.Lf];
+        if (is_right_edge) {
+            rightEdgeDtype = getDerTypeForEdges(
+                derivtype, BoundaryType::BLOCK_PHYS_BOUNDARY);
+        } else {
+            // TODO: update the boundary type based on what we want to build in
+            rightEdgeDtype = getDerTypeForEdges(
+                derivtype, BoundaryType::BLOCK_CFD_DIRICHLET);
         }
+
+        std::cout << "Left edge is " << leftEdgeDtype << std::endl;
+
+        buildMatrixLeft(tempP, tempQ, &ibgn, leftEdgeDtype, padding, curr_n);
+        buildMatrixRight(tempP, tempQ, &iend, rightEdgeDtype, padding, curr_n);
+
+        for (int i = ibgn; i <= iend; i++) {
+            for (int k = -method.Ld; k <= method.Rd; k++) {
+                if (!(i > -1) && !(i < curr_n)) {
+                    if (is_left_edge or is_right_edge) {
+                        delete[] tempP;
+                        delete[] tempQ;
+                    }
+                    throw std::out_of_range(
+                        "I is either less than zero or greater than curr_n! "
+                        "i=" +
+                        std::to_string(i) +
+                        " curr_n=" + std::to_string(curr_n));
+                }
+                if (!((i + k) > -1) && !((i + k) < curr_n)) {
+                    if (is_left_edge or is_right_edge) {
+                        delete[] tempP;
+                        delete[] tempQ;
+                    }
+                    throw std::out_of_range(
+                        "i + k is either less than 1 or greater than curr_n! "
+                        "i=" +
+                        std::to_string(i + k) + " k=" + std::to_string(k) +
+                        " curr_n=" + std::to_string(curr_n));
+                }
+
+                tempP[INDEX_N2D(i, i + k, curr_n)] =
+                    method.alpha[k + method.Ld];
+            }
+            for (int k = -method.Lf; k <= method.Rf; k++) {
+                if (!(i > -1) && !(i < curr_n)) {
+                    throw std::out_of_range(
+                        "(i is either less than zero or greater than curr_n! "
+                        "i=" +
+                        std::to_string(i) +
+                        " curr_n=" + std::to_string(curr_n));
+                }
+                if (!((i + k) > -1) && !((i + k) < curr_n)) {
+                    throw std::out_of_range(
+                        "i + k is either less than 1 or greater than curr_n! "
+                        "i=" +
+                        std::to_string(i + k) + " k=" + std::to_string(k) +
+                        " curr_n=" + std::to_string(curr_n));
+                }
+
+                tempQ[INDEX_N2D(i, i + k, curr_n)] = method.a[k + method.Lf];
+            }
+        }
+    } else if (derivtype == CFD_KIM_O4) {
+        // build Kim4 P
+        KimDeriv4_dP(tempP, curr_n);
+
+        // then build Q
+        KimDeriv4_dQ(tempQ, curr_n);
+    } else if (derivtype == CFD_HAMR_O4) {
+        // build HAMR 4 P
+        HAMRDeriv4_dP(tempP, curr_n);
+
+        // then build Q
+        HAMRDeriv4_dQ(tempQ, curr_n);
+    } else if (derivtype == CFD_JT_O6) {
+        // build JTP Deriv P
+        JTPDeriv6_dP(tempP, curr_n); 
+
+        // then build Q
+        JTPDeriv6_dQ(tempQ, curr_n);
+    } else {
+        if (is_left_edge or is_right_edge) {
+            delete[] tempP;
+            delete[] tempQ;
+        }
+        throw std::invalid_argument(
+            "The CFD deriv type was not one of the valid options. derivtype=" +
+            std::to_string(derivtype));
     }
 
     // copy the values back in
