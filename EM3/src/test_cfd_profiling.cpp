@@ -39,6 +39,88 @@ void sine_init(double_t *u_var, const uint32_t *sz, const double_t *deltas) {
     }
 }
 
+void boris_init(double_t *u_var, const uint32_t *sz, const double_t *deltas,
+                double_t *u_dx = nullptr, double_t *u_dy = nullptr,
+                double_t *u_dz = nullptr) {
+    const double_t x_start = 0.0;
+    const double_t y_start = 0.0;
+    const double_t z_start = 0.0;
+    const double_t dx = deltas[0];
+    const double_t dy = deltas[1];
+    const double_t dz = deltas[2];
+
+    const double_t amplitude = 0.01;
+
+    const unsigned int nx = sz[0];
+    const unsigned int ny = sz[1];
+    const unsigned int nz = sz[2];
+
+    for (uint16_t k = 0; k < nz; k++) {
+        double_t z = z_start + k * dz;
+        for (uint16_t j = 0; j < ny; j++) {
+            double_t y = y_start + j * dy;
+            for (uint16_t i = 0; i < nx; i++) {
+                double x = x_start + i * dx;
+                u_var[IDX(i, j, k)] =
+                    (5.0 / 100.0) *
+                    exp(-1.0 * sin(2 * (x - 3.14159)) - sin(2 * (y - 3.14159)) -
+                        sin(2 * (z - 3.14159)));
+            }
+        }
+    }
+
+    if (u_dx != nullptr) {
+        for (uint16_t k = 0; k < nz; k++) {
+            double_t z = z_start + k * dz;
+            for (uint16_t j = 0; j < ny; j++) {
+                double_t y = y_start + j * dy;
+                for (uint16_t i = 0; i < nx; i++) {
+                    double x = x_start + i * dx;
+                    u_var[IDX(i, j, k)] =
+                        -0.1 *
+                        exp(sin(6.28318 - 2 * x) + sin(6.28318 - 2 * y) +
+                            sin(6.28318 - 2 * z)) *
+                        cos(6.28318 - 2 * x);
+                }
+            }
+        }
+    }
+
+    if (u_dy != nullptr) {
+        for (uint16_t k = 0; k < nz; k++) {
+            double_t z = z_start + k * dz;
+            for (uint16_t j = 0; j < ny; j++) {
+                double_t y = y_start + j * dy;
+                for (uint16_t i = 0; i < nx; i++) {
+                    double x = x_start + i * dx;
+                    u_var[IDX(i, j, k)] =
+                        -0.1 *
+                        exp(sin(6.28318 - 2 * x) + sin(6.28318 - 2 * y) +
+                            sin(6.28318 - 2 * z)) *
+                        cos(6.28318 - 2 * y);
+                }
+            }
+        }
+    }
+
+    if (u_dz != nullptr) {
+        for (uint16_t k = 0; k < nz; k++) {
+            double_t z = z_start + k * dz;
+            for (uint16_t j = 0; j < ny; j++) {
+                double_t y = y_start + j * dy;
+                for (uint16_t i = 0; i < nx; i++) {
+                    double x = x_start + i * dx;
+                    u_var[IDX(i, j, k)] =
+                        -0.1 *
+                        exp(sin(6.28318 - 2 * x) + sin(6.28318 - 2 * y) +
+                            sin(6.28318 - 2 * z)) *
+                        cos(6.28318 - 2 * z);
+                }
+            }
+        }
+    }
+}
+
 void random_init(double_t *u_var, const uint32_t *sz) {
     const double_t amplitude = 0.001;
     const unsigned int nx = sz[0];
@@ -71,7 +153,8 @@ void zero_init(double_t *u_var, const uint32_t *sz) {
 }
 
 void init_data(const uint32_t init_type, double_t *u_var, const uint32_t *sz,
-               const double *deltas) {
+               const double *deltas, double_t *u_dx = nullptr,
+               double_t *u_dy = nullptr, double_t *u_dz = nullptr) {
     switch (init_type) {
         case 0:
             zero_init(u_var, sz);
@@ -82,7 +165,7 @@ void init_data(const uint32_t init_type, double_t *u_var, const uint32_t *sz,
             break;
 
         case 2:
-            sine_init(u_var, sz, deltas);
+            boris_init(u_var, sz, deltas, u_dx, u_dy, u_dz);
             break;
 
         default:
@@ -152,12 +235,12 @@ std::tuple<double_t, double_t, double_t> calculate_mse(
     const uint32_t j_end = skip_pading ? sz[1] - helpers::padding : sz[1];
     const uint32_t k_end = skip_pading ? sz[2] - helpers::padding : sz[2];
 
-    std::cout << i_start << " " << i_end << std::endl;
+    // std::cout << i_start << " " << i_end << std::endl;
 
     const uint32_t total_points =
         (i_end - i_start) * (j_end - j_start) * (k_end - k_start);
 
-    std::cout << total_points << std::endl;
+    // std::cout << total_points << std::endl;
 
     for (uint16_t k = k_start; k < k_end; k++) {
         for (uint16_t j = j_start; j < j_end; j++) {
@@ -184,7 +267,10 @@ std::tuple<double_t, double_t, double_t> calculate_mse(
 
 void test_cfd_with_original_stencil(double_t *const u_var, const uint32_t *sz,
                                     const double *deltas,
-                                    dendro_cfd::CompactFiniteDiff *cfd) {
+                                    dendro_cfd::CompactFiniteDiff *cfd,
+                                    double_t *u_dx = nullptr,
+                                    double_t *u_dy = nullptr,
+                                    double_t *u_dz = nullptr) {
     // allocate a double block of memory
     const uint32_t totalSize = sz[0] * sz[1] * sz[2];
     double_t *deriv_workspace = new double_t[totalSize * 3 * 2];
@@ -207,36 +293,62 @@ void test_cfd_with_original_stencil(double_t *const u_var, const uint32_t *sz,
     cfd->cfd_z(derivz_cfd, u_var, deltas[2], sz, 0);
 
     // then compute the "error" difference between the two
-    double_t min_x, max_x, mse_x;
+    double_t min_x, max_x, mse_x, min_y, max_y, mse_y, min_z, max_z, mse_z;
     std::tie(mse_x, min_x, max_x) =
         calculate_mse(derivx_stencil, derivx_cfd, sz);
-
-    double_t min_y, max_y, mse_y;
     std::tie(mse_y, min_y, max_y) =
         calculate_mse(derivy_stencil, derivy_cfd, sz);
-
-    double_t min_z, max_z, mse_z;
     std::tie(mse_z, min_z, max_z) =
         calculate_mse(derivz_stencil, derivz_cfd, sz);
 
-    std::cout << GRN << "===COMPARING CFD TO STENCIL TEST RESULTS===" << NRM
+    std::cout << std::endl << GRN << "===COMPARING CFD TO STENCIL TEST RESULTS===" << NRM
               << std::endl;
-    std::cout << "   deriv_x : mse = \t" << mse_x << "\tmin = \t" << min_x
-              << "\tmax = \t" << max_x << std::endl;
-    std::cout << "   deriv_y : mse = \t" << mse_y << "\tmin = \t" << min_y
-              << "\tmax = \t" << max_y << std::endl;
-    std::cout << "   deriv_z : mse = \t" << mse_z << "\tmin = \t" << min_z
-              << "\tmax = \t" << max_z << std::endl;
+    std::cout << "   deriv_x : mse = \t" << mse_x << "\tmin_mse = \t" << min_x
+              << "\tmax_mse = \t" << max_x << std::endl;
+    std::cout << "   deriv_y : mse = \t" << mse_y << "\tmin_mse = \t" << min_y
+              << "\tmax_mse = \t" << max_y << std::endl;
+    std::cout << "   deriv_z : mse = \t" << mse_z << "\tmin_mse = \t" << min_z
+              << "\tmax_mse = \t" << max_z << std::endl;
+
+    if (u_dx != nullptr && u_dy != nullptr && u_dz != nullptr) {
+        // then compute the "error" difference between the two
+        std::tie(mse_x, min_x, max_x) = calculate_mse(derivx_stencil, u_dx, sz);
+        std::tie(mse_y, min_y, max_y) = calculate_mse(derivy_stencil, u_dy, sz);
+        std::tie(mse_z, min_z, max_z) = calculate_mse(derivz_stencil, u_dz, sz);
+
+        std::cout << std::endl << GRN << "===COMPARING STENCIL TO TRUTH RESULTS===" << NRM
+                  << std::endl;
+        std::cout << "   deriv_x : mse = \t" << mse_x << "\tmin_mse = \t"
+                  << min_x << "\tmax_mse = \t" << max_x << std::endl;
+        std::cout << "   deriv_y : mse = \t" << mse_y << "\tmin_mse = \t"
+                  << min_y << "\tmax_mse = \t" << max_y << std::endl;
+        std::cout << "   deriv_z : mse = \t" << mse_z << "\tmin_mse = \t"
+                  << min_z << "\tmax_mse = \t" << max_z << std::endl;
+
+        // then compute the "error" difference between the two
+        std::tie(mse_x, min_x, max_x) = calculate_mse(derivx_cfd, u_dx, sz);
+        std::tie(mse_y, min_y, max_y) = calculate_mse(derivy_cfd, u_dy, sz);
+        std::tie(mse_z, min_z, max_z) = calculate_mse(derivz_cfd, u_dz, sz);
+
+        std::cout << std::endl << GRN << "===COMPARING CFD TO TRUTH RESULTS===" << NRM
+                  << std::endl;
+        std::cout << "   deriv_x : mse = \t" << mse_x << "\tmin_mse = \t"
+                  << min_x << "\tmax_mse = \t" << max_x << std::endl;
+        std::cout << "   deriv_y : mse = \t" << mse_y << "\tmin_mse = \t"
+                  << min_y << "\tmax_mse = \t" << max_y << std::endl;
+        std::cout << "   deriv_z : mse = \t" << mse_z << "\tmin_mse = \t"
+                  << min_z << "\tmax_mse = \t" << max_z << std::endl;
+    }
 
     delete[] deriv_workspace;
 }
 
 int main(int argc, char **argv) {
     uint32_t eleorder = 8;
-    uint32_t deriv_type = 1;
+    dendro_cfd::DerType deriv_type = dendro_cfd::CFD_KIM_O4;
     uint32_t filter_type = 0;
     uint32_t num_tests = 1000;
-    uint32_t data_init = 1;
+    uint32_t data_init = 2;
 
     if (argc == 1) {
         std::cout << "Using default parameters." << std::endl;
@@ -254,9 +366,10 @@ int main(int argc, char **argv) {
         eleorder = atoi(argv[1]);
     }
     if (argc > 2) {
+        uint32_t temp_deriv_type = atoi(argv[2]);
         // read in the deriv_type we want to use
         // if it's set to 0, we'll do the default derivatives
-        deriv_type = atoi(argv[2]);
+        deriv_type = static_cast<dendro_cfd::DerType>(temp_deriv_type);
     }
     if (argc > 3) {
         filter_type = atoi(argv[3]);
@@ -286,10 +399,13 @@ int main(int argc, char **argv) {
     // now we can actually build up our test block
 
     double_t *u_var = new double_t[sz[0] * sz[1] * sz[2]];
+    double_t *u_dx_true = new double_t[sz[0] * sz[1] * sz[2]]();
+    double_t *u_dy_true = new double_t[sz[0] * sz[1] * sz[2]]();
+    double_t *u_dz_true = new double_t[sz[0] * sz[1] * sz[2]]();
 
-    double_t deltas[3] = {0.001, 0.001, 0.001};
+    double_t deltas[3] = {0.1, 0.1, 0.1};
 
-    init_data(data_init, u_var, sz, deltas);
+    init_data(data_init, u_var, sz, deltas, u_dx_true, u_dy_true, u_dz_true);
 
     // print_3d_mat(u_var, fullwidth, fullwidth, fullwidth);
 
@@ -298,33 +414,33 @@ int main(int argc, char **argv) {
                                       filter_type);
 
     // run a short test to see what the errors are
-    test_cfd_with_original_stencil((double_t *const)u_var, sz, deltas, &cfd);
+    test_cfd_with_original_stencil((double_t *const)u_var, sz, deltas, &cfd,
+                                   u_dx_true, u_dy_true, u_dz_true);
 
-    double *P = new double[fullwidth * fullwidth]();
-    double *Q = new double[fullwidth * fullwidth]();
+    // double *P = new double[fullwidth * fullwidth]();
+    // double *Q = new double[fullwidth * fullwidth]();
 
-    dendro_cfd::buildPandQMatrices(P, Q, helpers::padding, fullwidth,
-                              dendro_cfd::CFD_Q1_O6_ETA1, true, true);
+    // dendro_cfd::buildPandQMatrices(P, Q, helpers::padding, fullwidth,
+    //                                dendro_cfd::CFD_HAMR_O4, true, true);
 
-    std::cout << "P matrix: " << std::endl;
-    dendro_cfd::print_square_mat(P, fullwidth);
+    // std::cout << "P matrix: " << std::endl;
+    // dendro_cfd::print_square_mat(P, fullwidth);
 
-    // print_square_mat_flat(P, fullwidth);
+    // // print_square_mat_flat(P, fullwidth);
 
-    std::cout << std::endl << "Q matrix: " << std::endl;
-    dendro_cfd::print_square_mat(Q, fullwidth);
+    // std::cout << std::endl << "Q matrix: " << std::endl;
+    // dendro_cfd::print_square_mat(Q, fullwidth);
 
+    // double *Dmat = new double[fullwidth * fullwidth]();
 
-    double *Dmat = new double[fullwidth * fullwidth]();
+    // dendro_cfd::calculateDerivMatrix(Dmat, P, Q, fullwidth);
 
-    dendro_cfd::calculateDerivMatrix(Dmat, P, Q, fullwidth);
+    // std::cout << std::endl << "Dmat matrix: " << std::endl;
+    // dendro_cfd::print_square_mat(Dmat, fullwidth);
 
-    std::cout << std::endl << "Dmat matrix: " << std::endl;
-    dendro_cfd::print_square_mat(Dmat, fullwidth);
-
-    delete[] P;
-    delete[] Q;
-    delete[] Dmat;
+    // delete[] P;
+    // delete[] Q;
+    // delete[] Dmat;
     // var cleanup
     delete[] u_var;
 }
