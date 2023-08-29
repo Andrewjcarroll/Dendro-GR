@@ -76,7 +76,7 @@ void boris_init(double_t *u_var, const uint32_t *sz, const double_t *deltas,
                 double_t y = y_start + j * dy;
                 for (uint16_t i = 0; i < nx; i++) {
                     double x = x_start + i * dx;
-                    u_var[IDX(i, j, k)] =
+                    u_dx[IDX(i, j, k)] =
                         -0.1 *
                         exp(sin(6.28318 - 2 * x) + sin(6.28318 - 2 * y) +
                             sin(6.28318 - 2 * z)) *
@@ -93,7 +93,7 @@ void boris_init(double_t *u_var, const uint32_t *sz, const double_t *deltas,
                 double_t y = y_start + j * dy;
                 for (uint16_t i = 0; i < nx; i++) {
                     double x = x_start + i * dx;
-                    u_var[IDX(i, j, k)] =
+                    u_dy[IDX(i, j, k)] =
                         -0.1 *
                         exp(sin(6.28318 - 2 * x) + sin(6.28318 - 2 * y) +
                             sin(6.28318 - 2 * z)) *
@@ -110,7 +110,7 @@ void boris_init(double_t *u_var, const uint32_t *sz, const double_t *deltas,
                 double_t y = y_start + j * dy;
                 for (uint16_t i = 0; i < nx; i++) {
                     double x = x_start + i * dx;
-                    u_var[IDX(i, j, k)] =
+                    u_dz[IDX(i, j, k)] =
                         -0.1 *
                         exp(sin(6.28318 - 2 * x) + sin(6.28318 - 2 * y) +
                             sin(6.28318 - 2 * z)) *
@@ -284,9 +284,36 @@ void test_cfd_with_original_stencil(double_t *const u_var, const uint32_t *sz,
     double_t *const derivz_cfd = deriv_workspace + 5 * totalSize;
 
     // then compute!
-    deriv_x(derivx_stencil, u_var, deltas[0], sz, 0);
-    deriv_y(derivy_stencil, u_var, deltas[1], sz, 0);
-    deriv_z(derivz_stencil, u_var, deltas[2], sz, 0);
+
+    void (*deriv_use_x)(double *const, const double *const, const double,
+                        const unsigned int *, unsigned);
+    void (*deriv_use_y)(double *const, const double *const, const double,
+                        const unsigned int *, unsigned);
+    void (*deriv_use_z)(double *const, const double *const, const double,
+                        const unsigned int *, unsigned);
+
+    if (helpers::padding == 2) {
+        deriv_use_x = &deriv42_x_2pad;
+        deriv_use_y = &deriv42_y_2pad;
+        deriv_use_z = &deriv42_z_2pad;
+    } else if (helpers::padding == 3) {
+        deriv_use_x = &deriv644_x;
+        deriv_use_y = &deriv644_y;
+        deriv_use_z = &deriv644_z;
+    } else if (helpers::padding == 4) {
+        deriv_use_x = &deriv8666_x;
+        deriv_use_y = &deriv8666_y;
+        deriv_use_z = &deriv8666_z;
+    } else {
+        // NOTE: this is now 5 points, so 10th order stencils which we just... don't have haha
+        deriv_use_x = &deriv42_x;
+        deriv_use_y = &deriv42_y;
+        deriv_use_z = &deriv42_z;
+    }
+
+    deriv_use_x(derivx_stencil, u_var, deltas[0], sz, 0);
+    deriv_use_y(derivy_stencil, u_var, deltas[1], sz, 0);
+    deriv_use_z(derivz_stencil, u_var, deltas[2], sz, 0);
 
     cfd->cfd_x(derivx_cfd, u_var, deltas[0], sz, 0);
     cfd->cfd_y(derivy_cfd, u_var, deltas[1], sz, 0);
@@ -301,7 +328,8 @@ void test_cfd_with_original_stencil(double_t *const u_var, const uint32_t *sz,
     std::tie(mse_z, min_z, max_z) =
         calculate_mse(derivz_stencil, derivz_cfd, sz);
 
-    std::cout << std::endl << GRN << "===COMPARING CFD TO STENCIL TEST RESULTS===" << NRM
+    std::cout << std::endl
+              << GRN << "===COMPARING CFD TO STENCIL TEST RESULTS===" << NRM
               << std::endl;
     std::cout << "   deriv_x : mse = \t" << mse_x << "\tmin_mse = \t" << min_x
               << "\tmax_mse = \t" << max_x << std::endl;
@@ -316,7 +344,8 @@ void test_cfd_with_original_stencil(double_t *const u_var, const uint32_t *sz,
         std::tie(mse_y, min_y, max_y) = calculate_mse(derivy_stencil, u_dy, sz);
         std::tie(mse_z, min_z, max_z) = calculate_mse(derivz_stencil, u_dz, sz);
 
-        std::cout << std::endl << GRN << "===COMPARING STENCIL TO TRUTH RESULTS===" << NRM
+        std::cout << std::endl
+                  << GRN << "===COMPARING STENCIL TO TRUTH RESULTS===" << NRM
                   << std::endl;
         std::cout << "   deriv_x : mse = \t" << mse_x << "\tmin_mse = \t"
                   << min_x << "\tmax_mse = \t" << max_x << std::endl;
@@ -330,7 +359,8 @@ void test_cfd_with_original_stencil(double_t *const u_var, const uint32_t *sz,
         std::tie(mse_y, min_y, max_y) = calculate_mse(derivy_cfd, u_dy, sz);
         std::tie(mse_z, min_z, max_z) = calculate_mse(derivz_cfd, u_dz, sz);
 
-        std::cout << std::endl << GRN << "===COMPARING CFD TO TRUTH RESULTS===" << NRM
+        std::cout << std::endl
+                  << GRN << "===COMPARING CFD TO TRUTH RESULTS===" << NRM
                   << std::endl;
         std::cout << "   deriv_x : mse = \t" << mse_x << "\tmin_mse = \t"
                   << min_x << "\tmax_mse = \t" << max_x << std::endl;

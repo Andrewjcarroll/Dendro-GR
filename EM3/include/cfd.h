@@ -36,6 +36,8 @@ namespace dendro_cfd {
 // enum DerType { CFD_P1_O4 = 0, CFD_P1_O6, CFD_Q1_O6_ETA1 };
 
 enum DerType {
+    // NO CFD Initialization
+    CFD_NONE = -1,
 
     // the "main" compact finite difference types
     CFD_P1_O4 = 0,
@@ -185,7 +187,6 @@ void calculateDerivMatrix(double *D, double *P, double *Q, const int n);
 */
 void mulMM(double *C, double *A, double *B, int na, int nb);
 
-
 class CompactFiniteDiff {
    private:
     // STORAGE VARIABLES USED FOR THE DIFFERENT DIMENSIONS
@@ -240,6 +241,16 @@ class CompactFiniteDiff {
     }
 
     void set_deriv_type(const DerType deriv_type) {
+        if (deriv_type != CFD_NONE && deriv_type != CFD_P1_O4 &&
+            deriv_type != CFD_P1_O6 && deriv_type != CFD_Q1_O6_ETA1 &&
+            deriv_type != CFD_KIM_O4 && deriv_type != CFD_HAMR_O4 &&
+            deriv_type != CFD_JT_O6) {
+            throw std::invalid_argument(
+                "Couldn't change deriv type of CFD object, deriv type was not a valid "
+                "'base' "
+                "type: deriv_type = " +
+                std::to_string(deriv_type));
+        }
         m_deriv_type = deriv_type;
     }
 

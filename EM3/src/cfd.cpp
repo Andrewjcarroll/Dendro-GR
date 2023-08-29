@@ -9,6 +9,16 @@ CompactFiniteDiff::CompactFiniteDiff(const unsigned int num_dim,
                                      const unsigned int padding_size,
                                      const DerType deriv_type,
                                      const unsigned int filter_type) {
+    if (deriv_type != CFD_NONE && deriv_type != CFD_P1_O4 &&
+        deriv_type != CFD_P1_O6 && deriv_type != CFD_Q1_O6_ETA1 &&
+        deriv_type != CFD_KIM_O4 && deriv_type != CFD_HAMR_O4 &&
+        deriv_type != CFD_JT_O6) {
+        throw std::invalid_argument(
+            "Couldn't initialize CFD object, deriv type was not a valid 'base' "
+            "type: deriv_type = " +
+            std::to_string(deriv_type));
+    }
+
     m_deriv_type = deriv_type;
     m_filter_type = filter_type;
     m_curr_dim_size = num_dim;
@@ -19,6 +29,11 @@ CompactFiniteDiff::CompactFiniteDiff(const unsigned int num_dim,
     if (num_dim == 0) {
         return;
     }
+
+    if (deriv_type == CFD_NONE) {
+        return;
+    }
+
     initialize_cfd_matrix();
     initialize_cfd_filter();
 }
@@ -37,6 +52,11 @@ void CompactFiniteDiff::change_dim_size(const unsigned int dim_size) {
         m_curr_dim_size = dim_size;
 
         initialize_cfd_storage();
+
+        // if deriv type is none, for some reason, just exit
+        if (m_deriv_type == CFD_NONE) {
+            return;
+        }
 
         initialize_cfd_matrix();
         initialize_cfd_filter();
@@ -62,11 +82,13 @@ void CompactFiniteDiff::initialize_cfd_storage() {
 
 void CompactFiniteDiff::initialize_cfd_matrix() {
     // temporary P and Q storage used in calculations
-    double* P = new double[m_curr_dim_size * m_curr_dim_size]();
-    double* Q = new double[m_curr_dim_size * m_curr_dim_size]();
+    double *P = new double[m_curr_dim_size * m_curr_dim_size]();
+    double *Q = new double[m_curr_dim_size * m_curr_dim_size]();
 
-    // TODO: need to build up the other three combinations (the last one is likely never going to happen)
-    buildPandQMatrices(P, Q, m_padding_size, m_curr_dim_size, m_deriv_type, false, false);
+    // TODO: need to build up the other three combinations (the last one is
+    // likely never going to happen)
+    buildPandQMatrices(P, Q, m_padding_size, m_curr_dim_size, m_deriv_type,
+                       false, false);
 
     std::cout << "\nP MATRIX" << std::endl;
     print_square_mat(P, m_curr_dim_size);
@@ -88,17 +110,17 @@ void CompactFiniteDiff::initialize_cfd_matrix() {
     // int rank, npes;
     // MPI_Comm_rank(comm, &rank);
     // MPI_Comm_size(comm, &npes);
-//     int rank = 0;
+    //     int rank = 0;
 
-//     if (rank == 0) {
-//         printf("R matrix:\n");
-//         for (unsigned int k = 0; k < m_curr_dim_size; k++) {
-//             for (unsigned int m = 0; m < m_curr_dim_size; m++) {
-//                 printf("%f ", m_R[k * m_curr_dim_size + m]);
-//             }
-//             printf("\n");
-//         }
-//     }
+    //     if (rank == 0) {
+    //         printf("R matrix:\n");
+    //         for (unsigned int k = 0; k < m_curr_dim_size; k++) {
+    //             for (unsigned int m = 0; m < m_curr_dim_size; m++) {
+    //                 printf("%f ", m_R[k * m_curr_dim_size + m]);
+    //             }
+    //             printf("\n");
+    //         }
+    //     }
 }
 
 void CompactFiniteDiff::initialize_cfd_filter() {
@@ -152,6 +174,16 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
     const unsigned int ny = sz[1];
     const unsigned int nz = sz[2];
 
+    std::cout << "Nx, ny, nz: " << nx << " " << ny << " " << nz << std::endl;
+
+    char TRANSA = 'N';
+    char TRANSB = 'N';
+    int M = nx;
+    int N = 1;
+    int K = nx;
+    double alpha = 1.0 / dx;
+    double beta = 0.0;
+
     // left boundary to watch for
     // if (bflag & (1u << OCT_DIR_LEFT)) ;
 
@@ -160,20 +192,37 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
 
     for (unsigned int k = 0; k < nz; k++) {
         for (unsigned int j = 0; j < ny; j++) {
-            // for (unsigned int i = 0; i < nx; i++) {
-            //     m_u1d[i] = u[INDEX_3D(i, j, k)];
-            // }
-
             for (unsigned int i = 0; i < nx; i++) {
-                m_du1d[i] = 0.0;
-                for (unsigned int m = 0; m < nx; m++) {
-                    // m_du1d[i] += m_R[i * nx + m] * m_u1d[m];
-                    m_du1d[i] += m_R[i * nx + m] * u[INDEX_3D(m, j, k)];
-                }
+                m_u1d[i] = u[INDEX_3D(i, j, k)];
             }
 
+            // TODO: call just a pointer
+            // // optimization for X, since memory is laid out
+            // // z -> y -> x (as indicated by IDX/INDEX_3D)
+            // // we can just calculate the pointer address to use
+            // double *u_ptr = Dxu + nx * (j + ny * k);
+            // std::cout << "\nDxu and u_ptr " << Dxu << " " << u_ptr << " the
+            // junk:"  << nx * (j + ny * k) << std::endl;
+
+            // std::cout << u_ptr - Dxu << std::endl;
+
+            // // std::cout << std::endl;
+            // for (unsigned int i = 0; i < nx; i++) {
+            //     std::cout << m_u1d[i] << " " << u_ptr[i] << std::endl;
+            // }
+
+            // for (unsigned int i = 0; i < nx; i++) {
+            //     m_du1d[i] = 0.0;
+            //     for (unsigned int m = 0; m < nx; m++) {
+            //         m_du1d[i] += m_R[i * nx + m] * m_u1d[m];
+            //     }
+            // }
+
+            dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, m_R, &M, m_u1d, &K,
+                   &beta, m_du1d, &M);
+
             for (unsigned int i = 0; i < nx; i++) {
-                Dxu[INDEX_3D(i, j, k)] = m_du1d[i] / dx;
+                Dxu[INDEX_3D(i, j, k)] = m_du1d[i];
             }
         }
     }
@@ -186,26 +235,37 @@ void CompactFiniteDiff::cfd_y(double *const Dyu, const double *const u,
     const unsigned int ny = sz[1];
     const unsigned int nz = sz[2];
 
+    char TRANSA = 'N';
+    char TRANSB = 'N';
+    int M = ny;
+    int N = 1;
+    int K = ny;
+    double alpha = 1.0 / dy;
+    double beta = 0.0;
+
     // if (bflag & (1u << OCT_DIR_DOWN));
 
     // if (bflag & (1u << OCT_DIR_UP));
 
     for (unsigned int k = 0; k < nz; k++) {
         for (unsigned int i = 0; i < nx; i++) {
-            // for (unsigned int j = 0; j < ny; j++) {
-            //     m_u1d[j] = u[INDEX_3D(i, j, k)];
-            // }
-
             for (unsigned int j = 0; j < ny; j++) {
-                m_du1d[j] = 0.0;
-                for (unsigned int m = 0; m < ny; m++) {
-                    // m_du1d[j] += m_R[j * ny + m] * m_u1d[m];
-                    m_du1d[j] += m_R[j * ny + m] * u[INDEX_3D(i, m, k)];
-                }
+                m_u1d[j] = u[INDEX_3D(i, j, k)];
             }
 
+            // for (unsigned int j = 0; j < ny; j++) {
+            //     m_du1d[j] = 0.0;
+            //     for (unsigned int m = 0; m < ny; m++) {
+            //         m_du1d[j] += m_R[j * ny + m] * m_u1d[m];
+            //         // m_du1d[j] += m_R[j * ny + m] * u[INDEX_3D(i, m, k)];
+            //     }
+            // }
+
+            dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, m_R, &M, m_u1d, &K,
+                   &beta, m_du1d, &M);
+
             for (unsigned int j = 0; j < ny; j++) {
-                Dyu[INDEX_3D(i, j, k)] = m_du1d[j] / dy;
+                Dyu[INDEX_3D(i, j, k)] = m_du1d[j];
             }
         }
     }
@@ -218,26 +278,37 @@ void CompactFiniteDiff::cfd_z(double *const Dzu, const double *const u,
     const unsigned int ny = sz[1];
     const unsigned int nz = sz[2];
 
+    char TRANSA = 'N';
+    char TRANSB = 'N';
+    int M = nz;
+    int N = 1;
+    int K = nz;
+    double alpha = 1.0 / dz;
+    double beta = 0.0;
+
     // if (bflag & (1u << OCT_DIR_BACK)) ;
 
     // if (bflag & (1u << OCT_DIR_FRONT)) ;
 
     for (unsigned int j = 0; j < ny; j++) {
         for (unsigned int i = 0; i < nx; i++) {
-            // for (unsigned int k = 0; k < nz; k++) {
-            //     m_u1d[k] = u[INDEX_3D(i, j, k)];
-            // }
-
             for (unsigned int k = 0; k < nz; k++) {
-                m_du1d[k] = 0.0;
-                for (unsigned int m = 0; m < nz; m++) {
-                    // m_du1d[k] += m_R[k * nz + m] * m_u1d[m];
-                    m_du1d[k] += m_R[k * nz + m] * u[INDEX_3D(i, j, m)];
-                }
+                m_u1d[k] = u[INDEX_3D(i, j, k)];
             }
 
+            // for (unsigned int k = 0; k < nz; k++) {
+            //     m_du1d[k] = 0.0;
+            //     for (unsigned int m = 0; m < nz; m++) {
+            //         m_du1d[k] += m_R[k * nz + m] * m_u1d[m];
+            //         // m_du1d[k] += m_R[k * nz + m] * u[INDEX_3D(i, j, m)];
+            //     }
+            // }
+
+            dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, m_R, &M, m_u1d, &K,
+                   &beta, m_du1d, &M);
+
             for (unsigned int k = 0; k < nz; k++) {
-                Dzu[INDEX_3D(i, j, k)] = m_du1d[k] / dz;
+                Dzu[INDEX_3D(i, j, k)] = m_du1d[k];
             }
         }
     }
@@ -427,7 +498,7 @@ void buildPandQMatrices(double *P, double *Q, const uint32_t padding,
         tempP = new double[curr_n * curr_n]();
         tempQ = new double[curr_n * curr_n]();
     } else {
-        // just use the same pointer value
+        // just use the same pointer value, then no need to adjust later even
         tempP = P;
         tempQ = Q;
     }
@@ -530,10 +601,19 @@ void buildPandQMatrices(double *P, double *Q, const uint32_t padding,
         HAMRDeriv4_dQ(tempQ, curr_n);
     } else if (derivtype == CFD_JT_O6) {
         // build JTP Deriv P
-        JTPDeriv6_dP(tempP, curr_n); 
+        JTPDeriv6_dP(tempP, curr_n);
 
         // then build Q
         JTPDeriv6_dQ(tempQ, curr_n);
+    } else if (derivtype == CFD_NONE) {
+        // just.... do nothing... keep them at zeros
+        if (is_left_edge or is_right_edge) {
+            delete[] tempP;
+            delete[] tempQ;
+        }
+        throw std::invalid_argument(
+            "dendro_cfd::buildPandQMatrices should never be called with a "
+            "CFD_NONE deriv type!");
     } else {
         if (is_left_edge or is_right_edge) {
             delete[] tempP;
