@@ -311,13 +311,15 @@ void test_cfd_with_original_stencil(double_t *const u_var, const uint32_t *sz,
         deriv_use_z = &deriv42_z;
     }
 
-    deriv_use_x(derivx_stencil, u_var, deltas[0], sz, 0);
-    deriv_use_y(derivy_stencil, u_var, deltas[1], sz, 0);
-    deriv_use_z(derivz_stencil, u_var, deltas[2], sz, 0);
+    const unsigned int bflag = (1 << 6) - 1;
 
-    cfd->cfd_x(derivx_cfd, u_var, deltas[0], sz, 0);
-    cfd->cfd_y(derivy_cfd, u_var, deltas[1], sz, 0);
-    cfd->cfd_z(derivz_cfd, u_var, deltas[2], sz, 0);
+    deriv_use_x(derivx_stencil, u_var, deltas[0], sz, bflag);
+    deriv_use_y(derivy_stencil, u_var, deltas[1], sz, bflag);
+    deriv_use_z(derivz_stencil, u_var, deltas[2], sz, bflag);
+
+    cfd->cfd_x(derivx_cfd, u_var, deltas[0], sz, bflag);
+    cfd->cfd_y(derivy_cfd, u_var, deltas[1], sz, bflag);
+    cfd->cfd_z(derivz_cfd, u_var, deltas[2], sz, bflag);
 
     // then compute the "error" difference between the two
     double_t min_x, max_x, mse_x, min_y, max_y, mse_y, min_z, max_z, mse_z;
@@ -473,4 +475,7 @@ int main(int argc, char **argv) {
     // delete[] Dmat;
     // var cleanup
     delete[] u_var;
+    delete[] u_dx_true;
+    delete[] u_dy_true;
+    delete[] u_dz_true;
 }

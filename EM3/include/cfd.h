@@ -181,6 +181,10 @@ void buildMatrixRight(double *P, double *Q, int *xie, const DerType dtype,
 
 void calculateDerivMatrix(double *D, double *P, double *Q, const int n);
 
+
+void setArrToZero(double *Mat, const int n);
+
+
 /*
  Computes
      C := alpha*op( A )*op( B ) + beta*C,

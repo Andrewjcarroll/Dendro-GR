@@ -85,42 +85,98 @@ void CompactFiniteDiff::initialize_cfd_matrix() {
     double *P = new double[m_curr_dim_size * m_curr_dim_size]();
     double *Q = new double[m_curr_dim_size * m_curr_dim_size]();
 
+    // for each cfd matrix that needs to be initialized, we need the "base"
+    // matrix, the "left edge" and the "right edge" to be safe.
+
+    // TODO: it might be necessary if the processor knows what boundaries it has
+    // but these matrices are small compared to the blocks that they're probably
+    // alright plus, these are only calculated once and not over and over again.
+
     // TODO: need to build up the other three combinations (the last one is
     // likely never going to happen)
     buildPandQMatrices(P, Q, m_padding_size, m_curr_dim_size, m_deriv_type,
                        false, false);
 
+#ifdef PRINT_COMPACT_MATRICES
     std::cout << "\nP MATRIX" << std::endl;
     print_square_mat(P, m_curr_dim_size);
 
     std::cout << "\nQ MATRIX" << std::endl;
     print_square_mat(Q, m_curr_dim_size);
+#endif
 
     calculateDerivMatrix(m_R, P, Q, m_curr_dim_size);
 
+#ifdef PRINT_COMPACT_MATRICES
     std::cout << "\nDERIV MATRIX" << std::endl;
     print_square_mat(m_R, m_curr_dim_size);
+#endif
+
+    // reset P and Q and then do the LEFT version
+    setArrToZero(P, m_curr_dim_size * m_curr_dim_size);
+    setArrToZero(Q, m_curr_dim_size * m_curr_dim_size);
+    buildPandQMatrices(P, Q, m_padding_size, m_curr_dim_size, m_deriv_type,
+                       true, false);
+
+#ifdef PRINT_COMPACT_MATRICES
+    std::cout << "\nLEFT P MATRIX" << std::endl;
+    print_square_mat(P, m_curr_dim_size);
+
+    std::cout << "\nLEFT Q MATRIX" << std::endl;
+    print_square_mat(Q, m_curr_dim_size);
+#endif
+
+    calculateDerivMatrix(m_R_left, P, Q, m_curr_dim_size);
+
+#ifdef PRINT_COMPACT_MATRICES
+    std::cout << "\nLEFT DERIV MATRIX" << std::endl;
+    print_square_mat(m_R_left, m_curr_dim_size);
+#endif
+
+    // reset P and Q and then do the RIGHT version
+    setArrToZero(P, m_curr_dim_size * m_curr_dim_size);
+    setArrToZero(Q, m_curr_dim_size * m_curr_dim_size);
+    buildPandQMatrices(P, Q, m_padding_size, m_curr_dim_size, m_deriv_type,
+                       false, true);
+
+#ifdef PRINT_COMPACT_MATRICES
+    std::cout << "\nRIGHT P MATRIX" << std::endl;
+    print_square_mat(P, m_curr_dim_size);
+
+    std::cout << "\nRIGHT Q MATRIX" << std::endl;
+    print_square_mat(Q, m_curr_dim_size);
+#endif
+
+    calculateDerivMatrix(m_R_right, P, Q, m_curr_dim_size);
+
+#ifdef PRINT_COMPACT_MATRICES
+    std::cout << "\nRIGHT DERIV MATRIX" << std::endl;
+    print_square_mat(m_R_right, m_curr_dim_size);
+#endif
+
+    // reset P and Q and then do the LEFTRIGHT version
+    setArrToZero(P, m_curr_dim_size * m_curr_dim_size);
+    setArrToZero(Q, m_curr_dim_size * m_curr_dim_size);
+    buildPandQMatrices(P, Q, m_padding_size, m_curr_dim_size, m_deriv_type,
+                       true, true);
+
+#ifdef PRINT_COMPACT_MATRICES
+    std::cout << "\nLEFTRIGHT P MATRIX" << std::endl;
+    print_square_mat(P, m_curr_dim_size);
+
+    std::cout << "\nLEFTRIGHT Q MATRIX" << std::endl;
+    print_square_mat(Q, m_curr_dim_size);
+#endif
+
+    calculateDerivMatrix(m_r_leftright, P, Q, m_curr_dim_size);
+
+#ifdef PRINT_COMPACT_MATRICES
+    std::cout << "\nLEFTRIGHT DERIV MATRIX" << std::endl;
+    print_square_mat(m_r_leftright, m_curr_dim_size);
+#endif
 
     delete[] P;
     delete[] Q;
-
-    // // Print the R matrix
-    // MPI_Comm comm = MPI_COMM_WORLD;
-
-    // int rank, npes;
-    // MPI_Comm_rank(comm, &rank);
-    // MPI_Comm_size(comm, &npes);
-    //     int rank = 0;
-
-    //     if (rank == 0) {
-    //         printf("R matrix:\n");
-    //         for (unsigned int k = 0; k < m_curr_dim_size; k++) {
-    //             for (unsigned int m = 0; m < m_curr_dim_size; m++) {
-    //                 printf("%f ", m_R[k * m_curr_dim_size + m]);
-    //             }
-    //             printf("\n");
-    //         }
-    //     }
 }
 
 void CompactFiniteDiff::initialize_cfd_filter() {
@@ -165,6 +221,10 @@ void CompactFiniteDiff::delete_cfd_matrices() {
     delete[] m_R;
     delete[] m_u1d;
     delete[] m_du1d;
+
+    delete[] m_R_left;
+    delete[] m_R_right;
+    delete[] m_r_leftright;
 }
 
 void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
@@ -174,7 +234,7 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
     const unsigned int ny = sz[1];
     const unsigned int nz = sz[2];
 
-    std::cout << "Nx, ny, nz: " << nx << " " << ny << " " << nz << std::endl;
+    // std::cout << "Nx, ny, nz: " << nx << " " << ny << " " << nz << std::endl;
 
     char TRANSA = 'N';
     char TRANSB = 'N';
@@ -184,11 +244,21 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
     double alpha = 1.0 / dx;
     double beta = 0.0;
 
-    // left boundary to watch for
-    // if (bflag & (1u << OCT_DIR_LEFT)) ;
+    double *R_mat_use = nullptr;
 
-    // // right boundary to watch for
-    // if (bflag & (1u << OCT_DIR_RIGHT)) ;
+    // to reduce the number of checks, check for failing bflag first
+    if (!(bflag & (1u << OCT_DIR_LEFT)) && !(bflag & (1u << OCT_DIR_RIGHT))) {
+        R_mat_use = m_R;
+    } else if ((bflag & (1u << OCT_DIR_LEFT)) &&
+               !(bflag & (1u << OCT_DIR_RIGHT))) {
+        R_mat_use = m_R_left;
+    } else if (!(bflag & (1u << OCT_DIR_LEFT)) &&
+               (bflag & (1u << OCT_DIR_RIGHT))) {
+        R_mat_use = m_R_right;
+    } else {
+        printf("Using left right\n");
+        R_mat_use = m_r_leftright;
+    }
 
     for (unsigned int k = 0; k < nz; k++) {
         for (unsigned int j = 0; j < ny; j++) {
@@ -197,14 +267,13 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
             }
 
             // TODO: call just a pointer
-            // // optimization for X, since memory is laid out
-            // // z -> y -> x (as indicated by IDX/INDEX_3D)
-            // // we can just calculate the pointer address to use
-            // double *u_ptr = Dxu + nx * (j + ny * k);
-            // std::cout << "\nDxu and u_ptr " << Dxu << " " << u_ptr << " the
-            // junk:"  << nx * (j + ny * k) << std::endl;
-
-            // std::cout << u_ptr - Dxu << std::endl;
+            // optimization for X, since memory is laid out
+            // z -> y -> x (as indicated by IDX/INDEX_3D)
+            // we can just calculate the pointer address to use
+            double *u_ptr = (double *)u + nx * (j + ny * k);
+            // NOTE: dgemm_ requires a non-const pointer, the const specifically
+            // so we don't accidentally modify u. It us not 100% clear if dgemm_
+            // modifies it or not
 
             // // std::cout << std::endl;
             // for (unsigned int i = 0; i < nx; i++) {
@@ -218,8 +287,8 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
             //     }
             // }
 
-            dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, m_R, &M, m_u1d, &K,
-                   &beta, m_du1d, &M);
+            dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &M, m_u1d,
+                   &K, &beta, m_du1d, &M);
 
             for (unsigned int i = 0; i < nx; i++) {
                 Dxu[INDEX_3D(i, j, k)] = m_du1d[i];
@@ -243,9 +312,20 @@ void CompactFiniteDiff::cfd_y(double *const Dyu, const double *const u,
     double alpha = 1.0 / dy;
     double beta = 0.0;
 
-    // if (bflag & (1u << OCT_DIR_DOWN));
-
-    // if (bflag & (1u << OCT_DIR_UP));
+    double *R_mat_use = nullptr;
+    // to reduce the number of checks, check for failing bflag first
+    if (!(bflag & (1u << OCT_DIR_DOWN)) && !(bflag & (1u << OCT_DIR_UP))) {
+        R_mat_use = m_R;
+    } else if ((bflag & (1u << OCT_DIR_DOWN)) &&
+               !(bflag & (1u << OCT_DIR_UP))) {
+        R_mat_use = m_R_left;
+    } else if (!(bflag & (1u << OCT_DIR_DOWN)) &&
+               (bflag & (1u << OCT_DIR_UP))) {
+        R_mat_use = m_R_right;
+    } else {
+        printf("Using left right\n");
+        R_mat_use = m_r_leftright;
+    }
 
     for (unsigned int k = 0; k < nz; k++) {
         for (unsigned int i = 0; i < nx; i++) {
@@ -261,8 +341,8 @@ void CompactFiniteDiff::cfd_y(double *const Dyu, const double *const u,
             //     }
             // }
 
-            dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, m_R, &M, m_u1d, &K,
-                   &beta, m_du1d, &M);
+            dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &M, m_u1d,
+                   &K, &beta, m_du1d, &M);
 
             for (unsigned int j = 0; j < ny; j++) {
                 Dyu[INDEX_3D(i, j, k)] = m_du1d[j];
@@ -286,9 +366,20 @@ void CompactFiniteDiff::cfd_z(double *const Dzu, const double *const u,
     double alpha = 1.0 / dz;
     double beta = 0.0;
 
-    // if (bflag & (1u << OCT_DIR_BACK)) ;
-
-    // if (bflag & (1u << OCT_DIR_FRONT)) ;
+    double *R_mat_use = nullptr;
+    // to reduce the number of checks, check for failing bflag first
+    if (!(bflag & (1u << OCT_DIR_BACK)) && !(bflag & (1u << OCT_DIR_FRONT))) {
+        R_mat_use = m_R;
+    } else if ((bflag & (1u << OCT_DIR_BACK)) &&
+               !(bflag & (1u << OCT_DIR_FRONT))) {
+        R_mat_use = m_R_left;
+    } else if (!(bflag & (1u << OCT_DIR_BACK)) &&
+               (bflag & (1u << OCT_DIR_FRONT))) {
+        R_mat_use = m_R_right;
+    } else {
+        printf("Using left right\n");
+        R_mat_use = m_r_leftright;
+    }
 
     for (unsigned int j = 0; j < ny; j++) {
         for (unsigned int i = 0; i < nx; i++) {
@@ -304,8 +395,8 @@ void CompactFiniteDiff::cfd_z(double *const Dzu, const double *const u,
             //     }
             // }
 
-            dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, m_R, &M, m_u1d, &K,
-                   &beta, m_du1d, &M);
+            dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &M, m_u1d,
+                   &K, &beta, m_du1d, &M);
 
             for (unsigned int k = 0; k < nz; k++) {
                 Dzu[INDEX_3D(i, j, k)] = m_du1d[k];
@@ -476,7 +567,7 @@ void buildPandQMatrices(double *P, double *Q, const uint32_t padding,
 
     if (is_right_edge) {
         // initialize bottom "diagonal" in padding to 1 as well
-        for (uint32_t ii = n; ii >= n - padding; ii--) {
+        for (uint32_t ii = n - 1; ii >= n - padding; ii--) {
             P[INDEX_2D(ii, ii)] = 1.0;
             Q[INDEX_2D(ii, ii)] = 1.0;
         }
@@ -686,8 +777,10 @@ void calculateDerivMatrix(double *D, double *P, double *Q, const int n) {
                                  std::to_string(info));
     }
 
+#ifdef PRINT_COMPACT_MATRICES
     std::cout << "P INVERSE" << std::endl;
     print_square_mat(Pinv, n);
+#endif
 
     mulMM(D, Pinv, Q, n, n);
 
@@ -715,6 +808,12 @@ void mulMM(double *C, double *A, double *B, int na, int nb) {
     int LDC = na;
 
     dgemm_(TA, TB, &M, &N, &K, &ALPHA, A, &LDA, B, &LDB, &BETA, C, &LDC);
+}
+
+void setArrToZero(double *arr, const int n) {
+    for (uint16_t ii = 0; ii < n; ii++) {
+        arr[ii] = 0.0;
+    }
 }
 
 void buildMatrixLeft(double *P, double *Q, int *xib, const DerType dtype,
