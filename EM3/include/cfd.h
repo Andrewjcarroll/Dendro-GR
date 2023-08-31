@@ -29,6 +29,11 @@ void dgetri_(int *N, double *A, int *lda, int *IPIV, double *WORK, int *lwork,
 void dgemm_(char *TA, char *TB, int *M, int *N, int *K, double *ALPHA,
             double *A, int *LDA, double *B, int *LDB, double *BETA, double *C,
             int *LDC);
+
+// generic matrix vector multiplication.
+extern "C" void dgemv_(char *trans, int *m, int *n, double *alpha, double *A,
+                       int *lda, double *x, int *incx, double *beta, double *y,
+                       int *incy);
 }
 
 namespace dendro_cfd {
@@ -181,9 +186,7 @@ void buildMatrixRight(double *P, double *Q, int *xie, const DerType dtype,
 
 void calculateDerivMatrix(double *D, double *P, double *Q, const int n);
 
-
 void setArrToZero(double *Mat, const int n);
-
 
 /*
  Computes
@@ -251,7 +254,8 @@ class CompactFiniteDiff {
             deriv_type != CFD_KIM_O4 && deriv_type != CFD_HAMR_O4 &&
             deriv_type != CFD_JT_O6) {
             throw std::invalid_argument(
-                "Couldn't change deriv type of CFD object, deriv type was not a valid "
+                "Couldn't change deriv type of CFD object, deriv type was not "
+                "a valid "
                 "'base' "
                 "type: deriv_type = " +
                 std::to_string(deriv_type));

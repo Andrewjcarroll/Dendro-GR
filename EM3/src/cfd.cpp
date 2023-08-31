@@ -245,8 +245,14 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
     int M = nx;
 #ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
     int N = ny;
+    
+    double *u_nonconst = (double *)u;
+    double *Dxu_nonconst = (double *)u;
+
+    double *u_ptr = u_nonconst;
+    double *dx_ptr = Dxu_nonconst;
 #else
-    int N = 1; // NOTE: this must be 1 if we're doing the old way...
+    int N = 1;  // NOTE: this must be 1 if we're doing the old way...
 #endif
     int K = nx;
     double alpha = 1.0 / dx;
@@ -272,8 +278,8 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
         // N = ny;
         // thanks to memory layout, we can just... use this as a matrix
         // so we can just grab the "matrix" of ny x nx for this one
-        double *u_ptr = (double *)u + nx * (ny * k);
-        double *dx_ptr = (double *)Dxu + nx * (ny * k);
+        u_ptr = u_nonconst + nx * (ny * k);
+        dx_ptr = Dxu_nonconst + nx * (ny * k);
 
         dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &M, u_ptr, &K,
                &beta, dx_ptr, &M);
@@ -353,6 +359,7 @@ void CompactFiniteDiff::cfd_y(double *const Dyu, const double *const u,
                &beta, m_du2d, &M);
 
         // TODO: see if there's a faster way to copy (i.e. SSE?)
+        // the data is transposed so it's much harder to just copy all at once
         for (unsigned int i = 0; i < nx; i++) {
             for (unsigned int j = 0; j < ny; j++) {
                 Dyu[INDEX_3D(i, j, k)] = m_du2d[j + i * ny];
@@ -426,9 +433,12 @@ void CompactFiniteDiff::cfd_z(double *const Dzu, const double *const u,
             //     }
             // }
 
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+            dgemv_(&TRANSA, &M, &K, &alpha, R_mat_use, &M, m_u1d, &N, &beta, m_du1d, &N);
+#else
             dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &M, m_u1d,
                    &K, &beta, m_du1d, &M);
-
+#endif
             for (unsigned int k = 0; k < nz; k++) {
                 Dzu[INDEX_3D(i, j, k)] = m_du1d[k];
             }
