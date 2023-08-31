@@ -4,12 +4,45 @@
 
 #include "cfd.h"
 #include "derivs.h"
+#include "profiler.h"
 
 #define UNIFORM_RAND_0_TO_X(X) ((double_t)rand() / (double_t)RAND_MAX * X)
 
 namespace helpers {
 uint32_t padding;
+
+profiler_t t_deriv_x;
+profiler_t t_deriv_y;
+profiler_t t_deriv_z;
+
+profiler_t t_compact_deriv_x;
+profiler_t t_compact_deriv_y;
+profiler_t t_compact_deriv_z;
+
+
+void print_profiler_results(uint64_t num_runs) {
+    long double num_runs_d = (long double)num_runs;
+
+    std::cout << YLW <<"==== PROFILING RESULTS ====" << NRM << std::endl;
+    std::cout << "Over " << num_runs << " total runs each" << std::endl;
+
+    std::cout << "\t =< Original Stencils >=" << std::endl;
+    std::cout << "\tx deriv: total=" << t_deriv_x.seconds << " average=" << t_deriv_x.seconds / num_runs_d << std::endl;
+    std::cout << "\ty deriv: total=" << t_deriv_y.seconds << " average=" << t_deriv_y.seconds / num_runs_d << std::endl;
+    std::cout << "\tz deriv: total=" << t_deriv_z.seconds << " average=" << t_deriv_z.seconds / num_runs_d << std::endl;
+
+    std::cout << std::endl;
+
+    std::cout << "\t =< Compact Stencils >=" << std::endl;
+    std::cout << "\tx deriv: total=" << t_compact_deriv_x.seconds << " average=" << t_compact_deriv_x.seconds / num_runs_d << std::endl;
+    std::cout << "\ty deriv: total=" << t_compact_deriv_y.seconds << " average=" << t_compact_deriv_y.seconds / num_runs_d << std::endl;
+    std::cout << "\tz deriv: total=" << t_compact_deriv_z.seconds << " average=" << t_compact_deriv_z.seconds / num_runs_d << std::endl;
+
+
 }
+
+
+}  // namespace helpers
 
 void sine_init(double_t *u_var, const uint32_t *sz, const double_t *deltas) {
     const double_t x_start = 0.0;
@@ -305,13 +338,15 @@ void test_cfd_with_original_stencil(double_t *const u_var, const uint32_t *sz,
         deriv_use_y = &deriv8666_y;
         deriv_use_z = &deriv8666_z;
     } else {
-        // NOTE: this is now 5 points, so 10th order stencils which we just... don't have haha
+        // NOTE: this is now 5 points, so 10th order stencils which we just...
+        // don't have haha
         deriv_use_x = &deriv42_x;
         deriv_use_y = &deriv42_y;
         deriv_use_z = &deriv42_z;
     }
 
-    const unsigned int bflag = (1 << 6) - 1;
+    // const unsigned int bflag = (1 << 6) - 1;
+    const unsigned int bflag = 0;
 
     deriv_use_x(derivx_stencil, u_var, deltas[0], sz, bflag);
     deriv_use_y(derivy_stencil, u_var, deltas[1], sz, bflag);
@@ -371,6 +406,129 @@ void test_cfd_with_original_stencil(double_t *const u_var, const uint32_t *sz,
         std::cout << "   deriv_z : mse = \t" << mse_z << "\tmin_mse = \t"
                   << min_z << "\tmax_mse = \t" << max_z << std::endl;
     }
+
+    delete[] deriv_workspace;
+}
+
+void profile_compact_stencils(double_t *const u_var, const uint32_t *sz,
+                              const double *deltas,
+                              dendro_cfd::CompactFiniteDiff *cfd,
+                              uint32_t num_runs) {
+    const uint32_t totalSize = sz[0] * sz[1] * sz[2];
+    double_t *deriv_workspace = new double_t[totalSize * 3];
+
+    double_t *const derivx_cfd = deriv_workspace + 0 * totalSize;
+    double_t *const derivy_cfd = deriv_workspace + 1 * totalSize;
+    double_t *const derivz_cfd = deriv_workspace + 2 * totalSize;
+
+    uint32_t bflag = 0;
+
+    // warmup runs
+    for (uint32_t ii = 0; ii < 100; ii++) {
+        cfd->cfd_x(derivx_cfd, u_var, deltas[0], sz, bflag);
+    }
+
+    helpers::t_compact_deriv_x.start();
+    for (uint32_t ii = 0; ii < num_runs; ii++) {
+        cfd->cfd_x(derivx_cfd, u_var, deltas[0], sz, bflag);
+    }
+    helpers::t_compact_deriv_x.stop();
+
+    // warmup runs
+    for (uint32_t ii = 0; ii < 100; ii++) {
+        cfd->cfd_y(derivy_cfd, u_var, deltas[1], sz, bflag);
+    }
+
+    helpers::t_compact_deriv_y.start();
+    for (uint32_t ii = 0; ii < num_runs; ii++) {
+        cfd->cfd_y(derivy_cfd, u_var, deltas[1], sz, bflag);
+    }
+    helpers::t_compact_deriv_y.stop();
+
+    // warmup runs
+    for (uint32_t ii = 0; ii < 100; ii++) {
+        cfd->cfd_z(derivz_cfd, u_var, deltas[2], sz, bflag);
+    }
+
+    helpers::t_compact_deriv_z.start();
+    for (uint32_t ii = 0; ii < num_runs; ii++) {
+        cfd->cfd_z(derivz_cfd, u_var, deltas[2], sz, bflag);
+    }
+    helpers::t_compact_deriv_z.stop();
+
+    delete[] deriv_workspace;
+}
+
+void profile_original_stencils(double_t *const u_var, const uint32_t *sz,
+                               const double *deltas, uint32_t num_runs) {
+    const uint32_t totalSize = sz[0] * sz[1] * sz[2];
+    double_t *deriv_workspace = new double_t[totalSize * 3];
+
+    double_t *const derivx_stencil = deriv_workspace + 0 * totalSize;
+    double_t *const derivy_stencil = deriv_workspace + 1 * totalSize;
+    double_t *const derivz_stencil = deriv_workspace + 2 * totalSize;
+
+    void (*deriv_use_x)(double *const, const double *const, const double,
+                        const unsigned int *, unsigned);
+    void (*deriv_use_y)(double *const, const double *const, const double,
+                        const unsigned int *, unsigned);
+    void (*deriv_use_z)(double *const, const double *const, const double,
+                        const unsigned int *, unsigned);
+
+    if (helpers::padding == 2) {
+        deriv_use_x = &deriv42_x_2pad;
+        deriv_use_y = &deriv42_y_2pad;
+        deriv_use_z = &deriv42_z_2pad;
+    } else if (helpers::padding == 3) {
+        deriv_use_x = &deriv644_x;
+        deriv_use_y = &deriv644_y;
+        deriv_use_z = &deriv644_z;
+    } else if (helpers::padding == 4) {
+        deriv_use_x = &deriv8666_x;
+        deriv_use_y = &deriv8666_y;
+        deriv_use_z = &deriv8666_z;
+    } else {
+        // NOTE: this is now 5 points, so 10th order stencils which we just...
+        // don't have haha
+        deriv_use_x = &deriv42_x;
+        deriv_use_y = &deriv42_y;
+        deriv_use_z = &deriv42_z;
+    }
+
+    uint32_t bflag = 0;
+
+    // warmup runs
+    for (uint32_t ii = 0; ii < 100; ii++) {
+        deriv_use_x(derivx_stencil, u_var, deltas[0], sz, bflag);
+    }
+
+    helpers::t_deriv_x.start();
+    for (uint32_t ii = 0; ii < num_runs; ii++) {
+        deriv_use_x(derivx_stencil, u_var, deltas[0], sz, bflag);
+    }
+    helpers::t_deriv_x.stop();
+
+    // warmup runs
+    for (uint32_t ii = 0; ii < 100; ii++) {
+        deriv_use_y(derivy_stencil, u_var, deltas[1], sz, bflag);
+    }
+
+    helpers::t_deriv_y.start();
+    for (uint32_t ii = 0; ii < num_runs; ii++) {
+        deriv_use_y(derivy_stencil, u_var, deltas[1], sz, bflag);
+    }
+    helpers::t_deriv_y.stop();
+
+    // warmup runs
+    for (uint32_t ii = 0; ii < 100; ii++) {
+        deriv_use_z(derivz_stencil, u_var, deltas[2], sz, bflag);
+    }
+
+    helpers::t_deriv_z.start();
+    for (uint32_t ii = 0; ii < num_runs; ii++) {
+        deriv_use_z(derivz_stencil, u_var, deltas[2], sz, bflag);
+    }
+    helpers::t_deriv_z.stop();
 
     delete[] deriv_workspace;
 }
@@ -449,30 +607,13 @@ int main(int argc, char **argv) {
     test_cfd_with_original_stencil((double_t *const)u_var, sz, deltas, &cfd,
                                    u_dx_true, u_dy_true, u_dz_true);
 
-    // double *P = new double[fullwidth * fullwidth]();
-    // double *Q = new double[fullwidth * fullwidth]();
+    profile_original_stencils((double_t *const)u_var, sz, deltas, num_tests);
 
-    // dendro_cfd::buildPandQMatrices(P, Q, helpers::padding, fullwidth,
-    //                                dendro_cfd::CFD_HAMR_O4, true, true);
+    profile_compact_stencils((double_t *const)u_var, sz, deltas, &cfd, num_tests);
 
-    // std::cout << "P matrix: " << std::endl;
-    // dendro_cfd::print_square_mat(P, fullwidth);
+    // then print the profiler results
+    helpers::print_profiler_results(num_tests);
 
-    // // print_square_mat_flat(P, fullwidth);
-
-    // std::cout << std::endl << "Q matrix: " << std::endl;
-    // dendro_cfd::print_square_mat(Q, fullwidth);
-
-    // double *Dmat = new double[fullwidth * fullwidth]();
-
-    // dendro_cfd::calculateDerivMatrix(Dmat, P, Q, fullwidth);
-
-    // std::cout << std::endl << "Dmat matrix: " << std::endl;
-    // dendro_cfd::print_square_mat(Dmat, fullwidth);
-
-    // delete[] P;
-    // delete[] Q;
-    // delete[] Dmat;
     // var cleanup
     delete[] u_var;
     delete[] u_dx_true;
