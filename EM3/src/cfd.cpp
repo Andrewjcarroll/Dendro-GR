@@ -1,6 +1,6 @@
 #include "cfd.h"
 
-// #define FASTER_DERIV_CALC_VIA_MATRIX_MULT
+#define FASTER_DERIV_CALC_VIA_MATRIX_MULT
 
 namespace dendro_cfd {
 
@@ -241,14 +241,22 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
     // std::cout << "Nx, ny, nz: " << nx << " " << ny << " " << nz << std::endl;
 
     char TRANSA = 'N';
-    char TRANSB = 'N';
+    
     int M = nx;
 #ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
     int N = ny;
+    char TRANSB = 'T';
+
+    // NOTE: LDA, LDB, and LDC should be nx, ny, and nz
+    // TODO: fix for non-square sizes
+    int LDA = nx;
+    int LDB = ny;
+    int LDC = nx;
     
     double *u_curr_chunk = (double *)u;
-    double *du_curr_chunk = (double *)u;
+    double *du_curr_chunk = (double *)Dxu;
 #else
+    char TRANSB = 'N';
     int N = 1;  // NOTE: this must be 1 if we're doing the old way...
 #endif
     int K = nx;
@@ -276,8 +284,8 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
         // thanks to memory layout, we can just... use this as a matrix
         // so we can just grab the "matrix" of ny x nx for this one
 
-        dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &M, u_curr_chunk, &K,
-               &beta, du_curr_chunk, &M);
+        dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &LDA, u_curr_chunk, &LDB,
+               &beta, du_curr_chunk, &LDC);
 
         u_curr_chunk += nx * ny;
         du_curr_chunk += nx * ny;
@@ -325,7 +333,7 @@ void CompactFiniteDiff::cfd_y(double *const Dyu, const double *const u,
     double beta = 0.0;
 
 #ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
-    char TRANSB = 'T';
+    char TRANSB = 'N';
     int N = nx;
 
     double *u_curr_chunk = (double *)u;
