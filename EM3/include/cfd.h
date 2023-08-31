@@ -215,6 +215,7 @@ class CompactFiniteDiff {
     double *m_u1d = nullptr;
     // Additional temporary storage for operations in progress
     double *m_du1d = nullptr;
+    double *m_du2d = nullptr;
 
     // to check for initialization (not used)
     bool m_initialized_matrices = false;

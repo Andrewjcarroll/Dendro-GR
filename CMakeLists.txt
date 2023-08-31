@@ -16,6 +16,15 @@ project(Dendro-5.0 C CXX Fortran)
 # in the future
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
+
+# set up fsanatize flags to check for memory leaks, need to set them for C++, X, and linker but only on debug
+#  -fno-sanitize-recover
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address,undefined")
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=address,undefined")
+set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=address,undefined")
+
+
+
 # OpenMP, MPI, and GSL are required packages for all aspects of the project
 find_package(OpenMP REQUIRED)
 find_package(MPI REQUIRED)

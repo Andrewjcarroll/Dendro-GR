@@ -1,5 +1,7 @@
 #include "cfd.h"
 
+#define FASTER_DERIV_CALC_VIA_MATRIX_MULT
+
 namespace dendro_cfd {
 
 // initialize a "global" cfd object
@@ -78,6 +80,7 @@ void CompactFiniteDiff::initialize_cfd_storage() {
 
     m_u1d = new double[m_curr_dim_size];
     m_du1d = new double[m_curr_dim_size];
+    m_du2d = new double[m_curr_dim_size * m_curr_dim_size];
 }
 
 void CompactFiniteDiff::initialize_cfd_matrix() {
@@ -221,6 +224,7 @@ void CompactFiniteDiff::delete_cfd_matrices() {
     delete[] m_R;
     delete[] m_u1d;
     delete[] m_du1d;
+    delete[] m_du2d;
 
     delete[] m_R_left;
     delete[] m_R_right;
@@ -239,7 +243,11 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
     char TRANSA = 'N';
     char TRANSB = 'N';
     int M = nx;
-    int N = 1;
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+    int N = ny;
+#else
+    int N = 1; // NOTE: this must be 1 if we're doing the old way...
+#endif
     int K = nx;
     double alpha = 1.0 / dx;
     double beta = 0.0;
@@ -256,15 +264,28 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
                (bflag & (1u << OCT_DIR_RIGHT))) {
         R_mat_use = m_R_right;
     } else {
-        printf("Using left right\n");
         R_mat_use = m_r_leftright;
     }
 
     for (unsigned int k = 0; k < nz; k++) {
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+        // N = ny;
+        // thanks to memory layout, we can just... use this as a matrix
+        // so we can just grab the "matrix" of ny x nx for this one
+        double *u_ptr = (double *)u + nx * (ny * k);
+        double *dx_ptr = (double *)Dxu + nx * (ny * k);
+
+        dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &M, u_ptr, &K,
+               &beta, dx_ptr, &M);
+
+        // then just move stuff right back over if using the other derivative
+        // space! std::copy(m_du2d, m_du2d + (nx * ny), dx_ptr);
+
+#else
         for (unsigned int j = 0; j < ny; j++) {
-            for (unsigned int i = 0; i < nx; i++) {
-                m_u1d[i] = u[INDEX_3D(i, j, k)];
-            }
+            // for (unsigned int i = 0; i < nx; i++) {
+            //     m_u1d[i] = u[INDEX_3D(i, j, k)];
+            // }
 
             // TODO: call just a pointer
             // optimization for X, since memory is laid out
@@ -275,25 +296,14 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
             // so we don't accidentally modify u. It us not 100% clear if dgemm_
             // modifies it or not
 
-            // // std::cout << std::endl;
-            // for (unsigned int i = 0; i < nx; i++) {
-            //     std::cout << m_u1d[i] << " " << u_ptr[i] << std::endl;
-            // }
-
-            // for (unsigned int i = 0; i < nx; i++) {
-            //     m_du1d[i] = 0.0;
-            //     for (unsigned int m = 0; m < nx; m++) {
-            //         m_du1d[i] += m_R[i * nx + m] * m_u1d[m];
-            //     }
-            // }
-
-            dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &M, m_u1d,
+            dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &M, u_ptr,
                    &K, &beta, m_du1d, &M);
 
             for (unsigned int i = 0; i < nx; i++) {
                 Dxu[INDEX_3D(i, j, k)] = m_du1d[i];
             }
         }
+#endif
     }
 }
 
@@ -305,12 +315,18 @@ void CompactFiniteDiff::cfd_y(double *const Dyu, const double *const u,
     const unsigned int nz = sz[2];
 
     char TRANSA = 'N';
-    char TRANSB = 'N';
     int M = ny;
-    int N = 1;
     int K = ny;
     double alpha = 1.0 / dy;
     double beta = 0.0;
+
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+    char TRANSB = 'T';
+    int N = nx;
+#else
+    char TRANSB = 'N';
+    int N = 1;
+#endif
 
     double *R_mat_use = nullptr;
     // to reduce the number of checks, check for failing bflag first
@@ -323,11 +339,26 @@ void CompactFiniteDiff::cfd_y(double *const Dyu, const double *const u,
                (bflag & (1u << OCT_DIR_UP))) {
         R_mat_use = m_R_right;
     } else {
-        printf("Using left right\n");
         R_mat_use = m_r_leftright;
     }
 
     for (unsigned int k = 0; k < nz; k++) {
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+        // thanks to memory layout, we can just... use this as a matrix
+        // so we can just grab the "matrix" of ny x nx for this one
+        double *u_ptr = (double *)u + nx * (ny * k);
+        double *dy_ptr = (double *)Dyu + nx * (ny * k);
+
+        dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &M, u_ptr, &K,
+               &beta, m_du2d, &M);
+
+        // TODO: see if there's a faster way to copy (i.e. SSE?)
+        for (unsigned int i = 0; i < nx; i++) {
+            for (unsigned int j = 0; j < ny; j++) {
+                Dyu[INDEX_3D(i, j, k)] = m_du2d[j + i * ny];
+            }
+        }
+#else
         for (unsigned int i = 0; i < nx; i++) {
             for (unsigned int j = 0; j < ny; j++) {
                 m_u1d[j] = u[INDEX_3D(i, j, k)];
@@ -348,6 +379,7 @@ void CompactFiniteDiff::cfd_y(double *const Dyu, const double *const u,
                 Dyu[INDEX_3D(i, j, k)] = m_du1d[j];
             }
         }
+#endif
     }
 }
 
@@ -377,7 +409,6 @@ void CompactFiniteDiff::cfd_z(double *const Dzu, const double *const u,
                (bflag & (1u << OCT_DIR_FRONT))) {
         R_mat_use = m_R_right;
     } else {
-        printf("Using left right\n");
         R_mat_use = m_r_leftright;
     }
 
