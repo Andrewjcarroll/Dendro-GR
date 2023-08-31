@@ -1,6 +1,6 @@
 #include "cfd.h"
 
-#define FASTER_DERIV_CALC_VIA_MATRIX_MULT
+// #define FASTER_DERIV_CALC_VIA_MATRIX_MULT
 
 namespace dendro_cfd {
 
@@ -246,11 +246,8 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
 #ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
     int N = ny;
     
-    double *u_nonconst = (double *)u;
-    double *Dxu_nonconst = (double *)u;
-
-    double *u_ptr = u_nonconst;
-    double *dx_ptr = Dxu_nonconst;
+    double *u_curr_chunk = (double *)u;
+    double *du_curr_chunk = (double *)u;
 #else
     int N = 1;  // NOTE: this must be 1 if we're doing the old way...
 #endif
@@ -278,11 +275,12 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
         // N = ny;
         // thanks to memory layout, we can just... use this as a matrix
         // so we can just grab the "matrix" of ny x nx for this one
-        u_ptr = u_nonconst + nx * (ny * k);
-        dx_ptr = Dxu_nonconst + nx * (ny * k);
 
-        dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &M, u_ptr, &K,
-               &beta, dx_ptr, &M);
+        dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &M, u_curr_chunk, &K,
+               &beta, du_curr_chunk, &M);
+
+        u_curr_chunk += nx * ny;
+        du_curr_chunk += nx * ny;
 
         // then just move stuff right back over if using the other derivative
         // space! std::copy(m_du2d, m_du2d + (nx * ny), dx_ptr);
@@ -329,6 +327,8 @@ void CompactFiniteDiff::cfd_y(double *const Dyu, const double *const u,
 #ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
     char TRANSB = 'T';
     int N = nx;
+
+    double *u_curr_chunk = (double *)u;
 #else
     char TRANSB = 'N';
     int N = 1;
@@ -352,10 +352,8 @@ void CompactFiniteDiff::cfd_y(double *const Dyu, const double *const u,
 #ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
         // thanks to memory layout, we can just... use this as a matrix
         // so we can just grab the "matrix" of ny x nx for this one
-        double *u_ptr = (double *)u + nx * (ny * k);
-        double *dy_ptr = (double *)Dyu + nx * (ny * k);
 
-        dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &M, u_ptr, &K,
+        dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &M, u_curr_chunk, &K,
                &beta, m_du2d, &M);
 
         // TODO: see if there's a faster way to copy (i.e. SSE?)
@@ -365,6 +363,8 @@ void CompactFiniteDiff::cfd_y(double *const Dyu, const double *const u,
                 Dyu[INDEX_3D(i, j, k)] = m_du2d[j + i * ny];
             }
         }
+
+        u_curr_chunk += nx * ny;
 #else
         for (unsigned int i = 0; i < nx; i++) {
             for (unsigned int j = 0; j < ny; j++) {
