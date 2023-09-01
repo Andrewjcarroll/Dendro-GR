@@ -379,7 +379,7 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
     } else {
         // just assume that our CFD_TYPE was properly handled/cast
 
-        if (bflag) {
+        if (bflag == 2147483647) {
             deriv_x(grad_0_E0, E0, hx, sz, bflag);
             deriv_y(grad_1_E0, E0, hy, sz, bflag);
             deriv_z(grad_2_E0, E0, hz, sz, bflag);
