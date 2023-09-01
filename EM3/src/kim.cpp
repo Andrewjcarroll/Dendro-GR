@@ -1,8 +1,11 @@
 #include "kim.h"
 
+#include "compact_derivs.h"
+
 using namespace std;
 
 void KimDeriv4_dP(double *P, int n) {
+    double *tempP = new double[n * n];
     // defining the constants
     double g10 = 0.11737546726594537;
     double g20 = -0.067477420334188354;
@@ -22,44 +25,78 @@ void KimDeriv4_dP(double *P, int n) {
         for (int j = 0; j < n; j++) {
             if (i == j) {
                 // Main diagonal
-                P[i * n + j] = 1;
+                tempP[i * n + j] = 1;
+                // tempP[INDEX_2D(i, j)] = 1.0;
             } else if (i == j + 1 || i == j - 1) {
                 // Adjacent diagonals
-                P[i * n + j] = alpha;
+                tempP[i * n + j] = alpha;
+                // tempP[INDEX_2D(i, j)] = alpha;
             } else if (i == j + 2 || i == j - 2) {
                 // Adjacent super-diagonals
-                P[i * n + j] = beta;
+                tempP[i * n + j] = beta;
+                // tempP[INDEX_2D(i, j)] = beta;
             } else {
-                P[i * n + j] = 0;
+                tempP[i * n + j] = 0;
+                // tempP[INDEX_2D(i, j)] = 0.0;
             }
         }
     }
-    P[0 * n + 1] = g01;
-    P[0 * n + 2] = g02;
+    tempP[0 * n + 1] = g01;
+    tempP[0 * n + 2] = g02;
+    // tempP[INDEX_2D(0, 1)] = g01;
+    // tempP[INDEX_2D(0, 2)] = g02;
 
-    P[1 * n + 0] = g10;
-    P[1 * n + 2] = g12;
-    P[1 * n + 3] = g13;
+    tempP[1 * n + 0] = g10;
+    tempP[1 * n + 2] = g12;
+    tempP[1 * n + 3] = g13;
+    // tempP[INDEX_2D(1, 0)] = g10;
+    // tempP[INDEX_2D(1, 2)] = g12;
+    // tempP[INDEX_2D(1, 3)] = g13;
 
-    P[2 * n + 0] = g20;
-    P[2 * n + 1] = g21;
-    P[2 * n + 3] = g23;
-    P[2 * n + 4] = g24;
+    tempP[2 * n + 0] = g20;
+    tempP[2 * n + 1] = g21;
+    tempP[2 * n + 3] = g23;
+    tempP[2 * n + 4] = g24;
+    // tempP[INDEX_2D(2, 0)] = g20;
+    // tempP[INDEX_2D(2, 1)] = g21;
+    // tempP[INDEX_2D(2, 3)] = g23;
+    // tempP[INDEX_2D(2, 3)] = g24;
 
-    P[(n - 3) * n + (n - 5)] = g24;
-    P[(n - 3) * n + (n - 4)] = g23;
-    P[(n - 3) * n + (n - 2)] = g21;
-    P[(n - 3) * n + (n - 1)] = g20;
+    tempP[(n - 3) * n + (n - 5)] = g24;
+    tempP[(n - 3) * n + (n - 4)] = g23;
+    tempP[(n - 3) * n + (n - 2)] = g21;
+    tempP[(n - 3) * n + (n - 1)] = g20;
+    // tempP[INDEX_2D(n - 3, n - 5)] = g24;
+    // tempP[INDEX_2D(n - 3, n - 4)] = g23;
+    // tempP[INDEX_2D(n - 3, n - 2)] = g21;
+    // tempP[INDEX_2D(n - 3, n - 1)] = g20;
 
-    P[(n - 2) * n + (n - 4)] = g13;
-    P[(n - 2) * n + (n - 3)] = g12;
-    P[(n - 2) * n + (n - 1)] = g10;
+    tempP[(n - 2) * n + (n - 4)] = g13;
+    tempP[(n - 2) * n + (n - 3)] = g12;
+    tempP[(n - 2) * n + (n - 1)] = g10;
+    // tempP[INDEX_2D(n - 2, n - 4)] = g13;
+    // tempP[INDEX_2D(n - 2, n - 3)] = g12;
+    // tempP[INDEX_2D(n - 2, n - 1)] = g10;
 
-    P[(n - 1) * n + (n - 3)] = g02;
-    P[(n - 1) * n + (n - 2)] = g01;
+    tempP[(n - 1) * n + (n - 3)] = g02;
+    tempP[(n - 1) * n + (n - 2)] = g01;
+    // tempP[INDEX_2D(n - 1, n - 3)] = g02;
+    // tempP[INDEX_2D(n - 1, n - 2)] = g01;
+
+    // compute the transpose because i need to test this
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            P[INDEX_2D(i, j)] = tempP[INDEX_2D(j,i)];
+        }
+    }
+
+    delete[] tempP;
 }
 
 void KimDeriv4_dQ(double *Q, int n) {
+
+    double *tempQ = new double[n * n];
+
     // defining some important variables
     double b10 = -0.4197688256685424;
     double b20 = 0.20875393530974462;
@@ -97,79 +134,142 @@ void KimDeriv4_dQ(double *Q, int n) {
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
             if (i == j) {
+                // i * n + j
                 // Main diagonal
-                Q[i * n + j] = 0.0;
+                tempQ[i * n + j] = 0.0;
+                // tempQ[INDEX_2D(i, j)] = 0.0;
             } else if (i == j - 1) {
                 // Adjacent diagonals
-                Q[i * n + j] = a1;
+                tempQ[i * n + j] = a1;
+                // tempQ[INDEX_2D(i, j)] = a1;
             } else if (i == j + 1) {
                 // Adjacent diagonals
-                Q[i * n + j] = -a1;
+                tempQ[i * n + j] = -a1;
+                // tempQ[INDEX_2D(i, j)] = -a1;
             } else if (i == j - 2) {
                 // Super diagonals
-                Q[i * n + j] = a2;
+                tempQ[i * n + j] = a2;
+                // tempQ[INDEX_2D(i, j)] = a2;
             } else if (i == j + 2) {
                 // Super diagonals on
-                Q[i * n + j] = -a2;
+                tempQ[i * n + j] = -a2;
+                // tempQ[INDEX_2D(i, j)] = -a2;
             } else if (i == j - 3) {
                 // Super +1 diagonals on
-                Q[i * n + j] = a3;
+                tempQ[i * n + j] = a3;
+                // tempQ[INDEX_2D(i, j)] = a3;
             } else if (i == j + 3) {
                 // Super +1 diagonals on
-                Q[i * n + j] = -a3;
+                tempQ[i * n + j] = -a3;
+                // tempQ[INDEX_2D(i, j)] = -a3;
             } else {
-                Q[i * n + j] = 0.0;
+                tempQ[i * n + j] = 0.0;
+                // tempQ[INDEX_2D(i, j)] = 0.0;
+
             }
         }
     }
 
-    Q[0 * n + 0] = b00;
-    Q[0 * n + 1] = b01;
-    Q[0 * n + 2] = b02;
-    Q[0 * n + 3] = b03;
-    Q[0 * n + 4] = b04;
-    Q[0 * n + 5] = b05;
-    Q[0 * n + 6] = b06;
+    tempQ[0 * n + 0] = b00;
+    tempQ[0 * n + 1] = b01;
+    tempQ[0 * n + 2] = b02;
+    tempQ[0 * n + 3] = b03;
+    tempQ[0 * n + 4] = b04;
+    tempQ[0 * n + 5] = b05;
+    tempQ[0 * n + 6] = b06;
+    // tempQ[INDEX_2D(0, 0)] = b00;
+    // tempQ[INDEX_2D(0, 1)] = b01;
+    // tempQ[INDEX_2D(0, 2)] = b02;
+    // tempQ[INDEX_2D(0, 3)] = b03;
+    // tempQ[INDEX_2D(0, 4)] = b04;
+    // tempQ[INDEX_2D(0, 5)] = b05;
+    // tempQ[INDEX_2D(0, 6)] = b06;
 
-    Q[1 * n + 0] = b10;
-    Q[1 * n + 1] = b11;
-    Q[1 * n + 2] = b12;
-    Q[1 * n + 3] = b13;
-    Q[1 * n + 4] = b14;
-    Q[1 * n + 5] = b15;
-    Q[1 * n + 6] = b16;
+    tempQ[1 * n + 0] = b10;
+    tempQ[1 * n + 1] = b11;
+    tempQ[1 * n + 2] = b12;
+    tempQ[1 * n + 3] = b13;
+    tempQ[1 * n + 4] = b14;
+    tempQ[1 * n + 5] = b15;
+    tempQ[1 * n + 6] = b16;
+    // tempQ[INDEX_2D(1, 0)] = b10;
+    // tempQ[INDEX_2D(1, 1)] = b11;
+    // tempQ[INDEX_2D(1, 2)] = b12;
+    // tempQ[INDEX_2D(1, 3)] = b13;
+    // tempQ[INDEX_2D(1, 4)] = b14;
+    // tempQ[INDEX_2D(1, 5)] = b15;
+    // tempQ[INDEX_2D(1, 6)] = b16;
 
-    Q[2 * n + 0] = b20;
-    Q[2 * n + 1] = b21;
-    Q[2 * n + 2] = b22;
-    Q[2 * n + 3] = b23;
-    Q[2 * n + 4] = b24;
-    Q[2 * n + 5] = b25;
-    Q[2 * n + 6] = b26;
+    tempQ[2 * n + 0] = b20;
+    tempQ[2 * n + 1] = b21;
+    tempQ[2 * n + 2] = b22;
+    tempQ[2 * n + 3] = b23;
+    tempQ[2 * n + 4] = b24;
+    tempQ[2 * n + 5] = b25;
+    tempQ[2 * n + 6] = b26;
+    // tempQ[INDEX_2D(2, 0)] = b20;
+    // tempQ[INDEX_2D(2, 1)] = b21;
+    // tempQ[INDEX_2D(2, 2)] = b22;
+    // tempQ[INDEX_2D(2, 3)] = b23;
+    // tempQ[INDEX_2D(2, 4)] = b24;
+    // tempQ[INDEX_2D(2, 5)] = b25;
+    // tempQ[INDEX_2D(2, 6)] = b26;
 
-    Q[(n - 3) * n + (n - 7)] = -b26;
-    Q[(n - 3) * n + (n - 6)] = -b25;
-    Q[(n - 3) * n + (n - 5)] = -b24;
-    Q[(n - 3) * n + (n - 4)] = -b23;
-    Q[(n - 3) * n + (n - 3)] = -b22;
-    Q[(n - 3) * n + (n - 2)] = -b21;
-    Q[(n - 3) * n + (n - 1)] = -b20;
+    tempQ[(n - 3) * n + (n - 7)] = -b26;
+    tempQ[(n - 3) * n + (n - 6)] = -b25;
+    tempQ[(n - 3) * n + (n - 5)] = -b24;
+    tempQ[(n - 3) * n + (n - 4)] = -b23;
+    tempQ[(n - 3) * n + (n - 3)] = -b22;
+    tempQ[(n - 3) * n + (n - 2)] = -b21;
+    tempQ[(n - 3) * n + (n - 1)] = -b20;
+    // tempQ[INDEX_2D(n - 3, n - 7)] = -b26;
+    // tempQ[INDEX_2D(n - 3, n - 6)] = -b25;
+    // tempQ[INDEX_2D(n - 3, n - 5)] = -b24;
+    // tempQ[INDEX_2D(n - 3, n - 4)] = -b23;
+    // tempQ[INDEX_2D(n - 3, n - 3)] = -b22;
+    // tempQ[INDEX_2D(n - 3, n - 2)] = -b21;
+    // tempQ[INDEX_2D(n - 3, n - 1)] = -b20;
 
-    Q[(n - 2) * n + (n - 7)] = -b16;
-    Q[(n - 2) * n + (n - 6)] = -b15;
-    Q[(n - 2) * n + (n - 5)] = -b14;
-    Q[(n - 2) * n + (n - 4)] = -b13;
-    Q[(n - 2) * n + (n - 3)] = -b12;
-    Q[(n - 2) * n + (n - 2)] = -b11;
-    Q[(n - 2) * n + (n - 1)] = -b10;
+    tempQ[(n - 2) * n + (n - 7)] = -b16;
+    tempQ[(n - 2) * n + (n - 6)] = -b15;
+    tempQ[(n - 2) * n + (n - 5)] = -b14;
+    tempQ[(n - 2) * n + (n - 4)] = -b13;
+    tempQ[(n - 2) * n + (n - 3)] = -b12;
+    tempQ[(n - 2) * n + (n - 2)] = -b11;
+    tempQ[(n - 2) * n + (n - 1)] = -b10;
+    // tempQ[INDEX_2D(n-2, n-7)] = -b16;
+    // tempQ[INDEX_2D(n-2, n-6)] = -b15;
+    // tempQ[INDEX_2D(n-2, n-5)] = -b14;
+    // tempQ[INDEX_2D(n-2, n-4)] = -b13;
+    // tempQ[INDEX_2D(n-2, n-3)] = -b12;
+    // tempQ[INDEX_2D(n-2, n-2)] = -b11;
+    // tempQ[INDEX_2D(n-2, n-1)] = -b10;
 
-    Q[(n - 1) * n + (n - 7)] = -b06;
-    Q[(n - 1) * n + (n - 6)] = -b05;
-    Q[(n - 1) * n + (n - 5)] = -b04;
-    Q[(n - 1) * n + (n - 4)] = -b03;
-    Q[(n - 1) * n + (n - 3)] = -b02;
-    Q[(n - 1) * n + (n - 2)] = -b01;
-    Q[(n - 1) * n + (n - 1)] = -b00;
+    tempQ[(n - 1) * n + (n - 7)] = -b06;
+    tempQ[(n - 1) * n + (n - 6)] = -b05;
+    tempQ[(n - 1) * n + (n - 5)] = -b04;
+    tempQ[(n - 1) * n + (n - 4)] = -b03;
+    tempQ[(n - 1) * n + (n - 3)] = -b02;
+    tempQ[(n - 1) * n + (n - 2)] = -b01;
+    tempQ[(n - 1) * n + (n - 1)] = -b00;
+    // tempQ[INDEX_2D(n-1, n-7)] = -b06;
+    // tempQ[INDEX_2D(n-1, n-6)] = -b05;
+    // tempQ[INDEX_2D(n-1, n-5)] = -b04;
+    // tempQ[INDEX_2D(n-1, n-4)] = -b03;
+    // tempQ[INDEX_2D(n-1, n-3)] = -b02;
+    // tempQ[INDEX_2D(n-1, n-2)] = -b01;
+    // tempQ[(INDEX_2D(n-1, n-1)] = -b00;
+
+    // compute the transpose because i need to test this
+    // TODO: fix the actual population
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            Q[INDEX_2D(i, j)] = tempQ[INDEX_2D(j,i)];
+        }
+    }
+
+    delete[] tempQ;
+
 }
 
 bool initKimDeriv4(double *R, const unsigned int n) {
