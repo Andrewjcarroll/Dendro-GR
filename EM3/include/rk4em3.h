@@ -25,7 +25,7 @@
 #include "meshTestUtils.h"
 #include "mathMeshUtils.h"
 #include "physcon.h"
-#include "cfd.h"
+#include "compact_derivs.h"
 
 static const double RK4_C[]={1.0/6.0,1.0/3.0,1.0/3.0,1.0/6.0};
 

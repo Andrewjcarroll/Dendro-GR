@@ -2,7 +2,7 @@
 #include <tuple>
 #include <vector>
 
-#include "cfd.h"
+#include "compact_derivs.h"
 #include "derivs.h"
 #include "profiler.h"
 

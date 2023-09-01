@@ -14,7 +14,7 @@
 #include <iostream>
 #include "dendro.h"
 #include "memory_pool.h"
-#include "cfd.h"
+#include "compact_derivs.h"
 
 
 namespace em3

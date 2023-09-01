@@ -40,7 +40,7 @@ set(EM3_INC include/parameters.h
         include/em3Utils.h
         include/rhs.h
         include/kim.h
-        include/cfd.h
+        include/compact_derivs.h
         include/derivs.h
         include/profile_params.h
         include/physcon.h 
@@ -54,7 +54,7 @@ set(EM3_INC include/parameters.h
         src/parameters.cpp
         src/em3Utils.cpp
         src/rhs.cpp
-        src/cfd.cpp
+        src/compact_derivs.cpp
         src/derivs.cpp
         src/kim.cpp
         src/HAMR.cpp
@@ -84,7 +84,7 @@ endif()
 target_link_libraries(em3Solver dendro5 ${LAPACK_LIBRARIES} ${MPI_LIBRARIES} m)
 
 
-set(DERIV_TEST_SRC src/cfd.cpp
+set(DERIV_TEST_SRC src/compact_derivs.cpp
         src/derivs.cpp
         src/kim.cpp
         src/HAMR.cpp
@@ -93,7 +93,7 @@ set(DERIV_TEST_SRC src/cfd.cpp
 
 set(DERIV_TEST_INC include/rhs.h
         include/kim.h
-        include/cfd.h
+        include/compact_derivs.h
         include/JTP6.h
         include/HAMR.h
         include/kim_filter.h)

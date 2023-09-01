@@ -1,6 +1,6 @@
-#include "cfd.h"
+#include "compact_derivs.h"
 
-#define FASTER_DERIV_CALC_VIA_MATRIX_MULT
+// #define FASTER_DERIV_CALC_VIA_MATRIX_MULT
 
 namespace dendro_cfd {
 
