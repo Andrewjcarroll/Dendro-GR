@@ -327,29 +327,29 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
     if (bflag == 0) {
         // NOTE: the bflag check here is because we currently can't filter
         // boundaries!
-        cfd.filter_cfd_x(E0, hx, sz, bflag);
-        cfd.filter_cfd_y(E0, hy, sz, bflag);
-        cfd.filter_cfd_z(E0, hz, sz, bflag);
+        // cfd.filter_cfd_x(E0, hx, sz, bflag);
+        // cfd.filter_cfd_y(E0, hy, sz, bflag);
+        // cfd.filter_cfd_z(E0, hz, sz, bflag);
 
-        cfd.filter_cfd_x(E1, hx, sz, bflag);
-        cfd.filter_cfd_y(E1, hy, sz, bflag);
-        cfd.filter_cfd_z(E1, hz, sz, bflag);
+        // cfd.filter_cfd_x(E1, hx, sz, bflag);
+        // cfd.filter_cfd_y(E1, hy, sz, bflag);
+        // cfd.filter_cfd_z(E1, hz, sz, bflag);
 
-        cfd.filter_cfd_x(E2, hx, sz, bflag);
-        cfd.filter_cfd_y(E2, hy, sz, bflag);
-        cfd.filter_cfd_z(E2, hz, sz, bflag);
+        // cfd.filter_cfd_x(E2, hx, sz, bflag);
+        // cfd.filter_cfd_y(E2, hy, sz, bflag);
+        // cfd.filter_cfd_z(E2, hz, sz, bflag);
 
-        cfd.filter_cfd_x(B0, hx, sz, bflag);
-        cfd.filter_cfd_y(B0, hy, sz, bflag);
-        cfd.filter_cfd_z(B0, hz, sz, bflag);
+        // cfd.filter_cfd_x(B0, hx, sz, bflag);
+        // cfd.filter_cfd_y(B0, hy, sz, bflag);
+        // cfd.filter_cfd_z(B0, hz, sz, bflag);
 
-        cfd.filter_cfd_x(B1, hx, sz, bflag);
-        cfd.filter_cfd_y(B1, hy, sz, bflag);
-        cfd.filter_cfd_z(B1, hz, sz, bflag);
+        // cfd.filter_cfd_x(B1, hx, sz, bflag);
+        // cfd.filter_cfd_y(B1, hy, sz, bflag);
+        // cfd.filter_cfd_z(B1, hz, sz, bflag);
 
-        cfd.filter_cfd_x(B2, hx, sz, bflag);
-        cfd.filter_cfd_y(B2, hy, sz, bflag);
-        cfd.filter_cfd_z(B2, hz, sz, bflag);
+        // cfd.filter_cfd_x(B2, hx, sz, bflag);
+        // cfd.filter_cfd_y(B2, hy, sz, bflag);
+        // cfd.filter_cfd_z(B2, hz, sz, bflag);
     }
 
     if (em3::EM3_DERIV_TYPE == CFD_NONE) {
@@ -378,29 +378,56 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
         deriv_z(grad_2_B2, B2, hz, sz, bflag);
     } else {
         // just assume that our CFD_TYPE was properly handled/cast
-        cfd.cfd_x(grad_0_E0, E0, hx, sz, bflag);
-        cfd.cfd_y(grad_1_E0, E0, hy, sz, bflag);
-        cfd.cfd_z(grad_2_E0, E0, hz, sz, bflag);
 
-        cfd.cfd_x(grad_0_E1, E1, hx, sz, bflag);
-        cfd.cfd_y(grad_1_E1, E1, hy, sz, bflag);
-        cfd.cfd_z(grad_2_E1, E1, hz, sz, bflag);
+        if (bflag) {
+            deriv_x(grad_0_E0, E0, hx, sz, bflag);
+            deriv_y(grad_1_E0, E0, hy, sz, bflag);
+            deriv_z(grad_2_E0, E0, hz, sz, bflag);
 
-        cfd.cfd_x(grad_0_E2, E2, hx, sz, bflag);
-        cfd.cfd_y(grad_1_E2, E2, hy, sz, bflag);
-        cfd.cfd_z(grad_2_E2, E2, hz, sz, bflag);
+            deriv_x(grad_0_E1, E1, hx, sz, bflag);
+            deriv_y(grad_1_E1, E1, hy, sz, bflag);
+            deriv_z(grad_2_E1, E1, hz, sz, bflag);
 
-        cfd.cfd_x(grad_0_B0, B0, hx, sz, bflag);
-        cfd.cfd_y(grad_1_B0, B0, hy, sz, bflag);
-        cfd.cfd_z(grad_2_B0, B0, hz, sz, bflag);
+            deriv_x(grad_0_E2, E2, hx, sz, bflag);
+            deriv_y(grad_1_E2, E2, hy, sz, bflag);
+            deriv_z(grad_2_E2, E2, hz, sz, bflag);
 
-        cfd.cfd_x(grad_0_B1, B1, hx, sz, bflag);
-        cfd.cfd_y(grad_1_B1, B1, hy, sz, bflag);
-        cfd.cfd_z(grad_2_B1, B1, hz, sz, bflag);
+            deriv_x(grad_0_B0, B0, hx, sz, bflag);
+            deriv_y(grad_1_B0, B0, hy, sz, bflag);
+            deriv_z(grad_2_B0, B0, hz, sz, bflag);
 
-        cfd.cfd_x(grad_0_B2, B2, hx, sz, bflag);
-        cfd.cfd_y(grad_1_B2, B2, hy, sz, bflag);
-        cfd.cfd_z(grad_2_B2, B2, hz, sz, bflag);
+            deriv_x(grad_0_B1, B1, hx, sz, bflag);
+            deriv_y(grad_1_B1, B1, hy, sz, bflag);
+            deriv_z(grad_2_B1, B1, hz, sz, bflag);
+
+            deriv_x(grad_0_B2, B2, hx, sz, bflag);
+            deriv_y(grad_1_B2, B2, hy, sz, bflag);
+            deriv_z(grad_2_B2, B2, hz, sz, bflag);
+        } else {
+            cfd.cfd_x(grad_0_E0, E0, hx, sz, bflag);
+            cfd.cfd_y(grad_1_E0, E0, hy, sz, bflag);
+            cfd.cfd_z(grad_2_E0, E0, hz, sz, bflag);
+
+            cfd.cfd_x(grad_0_E1, E1, hx, sz, bflag);
+            cfd.cfd_y(grad_1_E1, E1, hy, sz, bflag);
+            cfd.cfd_z(grad_2_E1, E1, hz, sz, bflag);
+
+            cfd.cfd_x(grad_0_E2, E2, hx, sz, bflag);
+            cfd.cfd_y(grad_1_E2, E2, hy, sz, bflag);
+            cfd.cfd_z(grad_2_E2, E2, hz, sz, bflag);
+
+            cfd.cfd_x(grad_0_B0, B0, hx, sz, bflag);
+            cfd.cfd_y(grad_1_B0, B0, hy, sz, bflag);
+            cfd.cfd_z(grad_2_B0, B0, hz, sz, bflag);
+
+            cfd.cfd_x(grad_0_B1, B1, hx, sz, bflag);
+            cfd.cfd_y(grad_1_B1, B1, hy, sz, bflag);
+            cfd.cfd_z(grad_2_B1, B1, hz, sz, bflag);
+
+            cfd.cfd_x(grad_0_B2, B2, hx, sz, bflag);
+            cfd.cfd_y(grad_1_B2, B2, hy, sz, bflag);
+            cfd.cfd_z(grad_2_B2, B2, hz, sz, bflag);
+        }
     }
 
     em3::timer::t_deriv.stop();
