@@ -1,48 +1,64 @@
 #include "JTP6.h"
 
+#include "compact_derivs.h"
+
 using namespace std;
 
 void JTPDeriv6_dP(double *P, int n) {
+    double *tempP = new double[n * n];
+
     double alpha = 17.0 / 57.0;
     double beta = -1.0 / 114.0;
 
     // Initialize the matrix to zeros
     for (int i = 0; i < n * n; i++) {
-        P[i] = 0.0;
+        tempP[i] = 0.0;
     }
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
             if (i == j) {
                 // Main diagonal
-                P[i * n + j] = 1;
+                tempP[i * n + j] = 1;
             } else if (i == j + 1 || i == j - 1) {
                 // Adjacent diagonals
-                P[i * n + j] = alpha;
+                tempP[i * n + j] = alpha;
             } else if (i == j + 2 || i == j - 2) {
                 // Adjacent super-diagonals
-                P[i * n + j] = beta;
+                tempP[i * n + j] = beta;
             } else {
-                P[i * n + j] = 0;
+                tempP[i * n + j] = 0;
             }
         }
     }
 
-    P[0 * n + 1] = 8.0;
-    P[0 * n + 2] = 6.0;
-    P[(n - 1) * n + (n - 3)] = 6.0;
-    P[(n - 1) * n + (n - 2)] = 8.0;
+    tempP[0 * n + 1] = 8.0;
+    tempP[0 * n + 2] = 6.0;
+    tempP[(n - 1) * n + (n - 3)] = 6.0;
+    tempP[(n - 1) * n + (n - 2)] = 8.0;
 
     // Set diagonal values to 1
     for (int i = 0; i < n; i++) {
-        P[i * n + i] = 1.0;
+        tempP[i * n + i] = 1.0;
     }
+
+    // compute the transpose because i need to test this
+    // TODO: fix the actual population
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            P[INDEX_2D(i, j)] = tempP[INDEX_2D(j, i)];
+        }
+    }
+
+    delete[] tempP;
 }
 void JTPDeriv6_dQ(double *Q, int n) {
+    double *tempQ = new double[n * n];
+
     double hm1 = 1.0 / 1.0;
 
     // Initialize the matrix to zeros
     for (int i = 0; i < n * n; i++) {
-        Q[i] = 0.0;
+        tempQ[i] = 0.0;
     }
 
     double a = -43.0 / 12.0 * hm1;
@@ -53,22 +69,32 @@ void JTPDeriv6_dQ(double *Q, int n) {
 
     double t1 = 30.0 / 19.0 * 0.5 * hm1;
 
-    Q[(n - 1) * n + (n - 5)] = -e;
-    Q[(n - 1) * n + (n - 4)] = -d;
-    Q[(n - 1) * n + (n - 3)] = -c;
-    Q[(n - 1) * n + (n - 2)] = -b;
-    Q[(n - 1) * n + (n - 1)] = -a;
+    tempQ[(n - 1) * n + (n - 5)] = -e;
+    tempQ[(n - 1) * n + (n - 4)] = -d;
+    tempQ[(n - 1) * n + (n - 3)] = -c;
+    tempQ[(n - 1) * n + (n - 2)] = -b;
+    tempQ[(n - 1) * n + (n - 1)] = -a;
 
-    Q[0 * n + 0] = a;
-    Q[0 * n + 1] = b;
-    Q[0 * n + 2] = c;
-    Q[0 * n + 3] = d;
-    Q[0 * n + 4] = e;
+    tempQ[0 * n + 0] = a;
+    tempQ[0 * n + 1] = b;
+    tempQ[0 * n + 2] = c;
+    tempQ[0 * n + 3] = d;
+    tempQ[0 * n + 4] = e;
 
     for (int i = 1; i < n - 1; i++) {
-        Q[i * n + (i - 1)] = -t1;
-        Q[i * n + (i + 1)] = t1;
+        tempQ[i * n + (i - 1)] = -t1;
+        tempQ[i * n + (i + 1)] = t1;
     }
+
+    // compute the transpose because i need to test this
+    // TODO: fix the actual population
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            Q[INDEX_2D(i, j)] = tempQ[INDEX_2D(j, i)];
+        }
+    }
+
+    delete[] tempQ;
 }
 bool initJTPDeriv6(double *R, const unsigned int n) {
     double *P = new double[n * n];

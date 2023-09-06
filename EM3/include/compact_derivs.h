@@ -69,7 +69,7 @@ enum DerType {
 
 // NOTE: these are going to be used as global parameters if they're not physical
 enum BoundaryType {
-    BLOCK_CFD_CLOSURE = 0,
+    BLOCK_CFD_CLOSURE = 0, // closure gives better results but 6th requires 4 points, and 4th requires 3 points
     BLOCK_CFD_DIRICHLET,
     BLOCK_CFD_LOPSIDE_CLOSURE,
     BLOCK_PHYS_BOUNDARY
@@ -194,6 +194,10 @@ void setArrToZero(double *Mat, const int n);
 */
 void mulMM(double *C, double *A, double *B, int na, int nb);
 
+
+
+
+
 class CompactFiniteDiff {
    private:
     // STORAGE VARIABLES USED FOR THE DIFFERENT DIMENSIONS
@@ -263,6 +267,9 @@ class CompactFiniteDiff {
         m_deriv_type = deriv_type;
     }
 
+    /**
+     * Sets the padding size. NOTE however that this does *not* attempt to regenerate the matrices, so be sure to call the initialization
+    */
     void set_padding_size(const unsigned int padding_size) {
         m_padding_size = padding_size;
     }
@@ -285,5 +292,40 @@ class CompactFiniteDiff {
 };
 
 extern CompactFiniteDiff cfd;
+
+
+
+/**
+ * Initialization of various Compact Methods
+ * 
+ * From this point on various compact finite methods can be calculated and derived
+*/
+
+/**
+ * Initialization of the P and Q matrices for Kim's 4th Order Compact Derivatives
+ * 
+ * P and Q are assumed to **already by zeroed out**.
+ * 
+ * These derivative coefficients come from Tables I and II of :
+ * 
+ * Jae Wook Kim, "Quasi-disjoint pentadiagonal matrix systems for 
+ * the parallelization of compact finite-difference schemes and 
+ * filters," Journal of Computational Physics 241 (2013) 168–194.
+*/
+void initializeKim4PQ(double *P, double *Q, int n);
+
+
+/**
+ * Initialization of the P and Q matrices for Kim's 6th Order Compact Filter
+ * 
+ * P and Q are assumed to **already by zeroed out**.
+ * 
+ * These filter coefficients come from Tables III and IV of :
+ * 
+ * Jae Wook Kim, "Quasi-disjoint pentadiagonal matrix systems for 
+ * the parallelization of compact finite-difference schemes and 
+ * filters," Journal of Computational Physics 241 (2013) 168–194.
+*/
+void initializeKim6FilterPQ(double *P, double* Q, int n);
 
 }  // namespace dendro_cfd

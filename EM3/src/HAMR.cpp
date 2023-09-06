@@ -1,8 +1,11 @@
 #include "HAMR.h"
 
+#include "compact_derivs.h"
+
 using namespace std;
 
 void HAMRDeriv4_dP(double *P, int n) {
+    double *tempP = new double[n * n];
     // Define the variables
     double a00 = 1.0;
     double a10 = 0.1023343303;
@@ -33,47 +36,58 @@ void HAMRDeriv4_dP(double *P, int n) {
                 i * n + j;  // Calculate the 1D index for the (i, j) element
             if (i == j) {
                 // Main diagonal
-                P[index] = 1.0;
+                tempP[index] = 1.0;
             } else if (i == j + 1 || i == j - 1) {
                 // Adjacent diagonals
-                P[index] = alpha;
+                tempP[index] = alpha;
             } else if (i == j + 2 || i == j - 2) {
                 // Adjacent super-diagonals
-                P[index] = beta1;
+                tempP[index] = beta1;
             } else {
-                P[index] = 0.0;
+                tempP[index] = 0.0;
             }
         }
     }
 
     // Set specific values in the array
-    P[1] = a01;
-    P[2] = a02;
-    P[3] = 0.0;
+    tempP[1] = a01;
+    tempP[2] = a02;
+    tempP[3] = 0.0;
 
-    P[n] = a10;
-    P[n + 2] = a12;
-    P[n + 3] = a13;
+    tempP[n] = a10;
+    tempP[n + 2] = a12;
+    tempP[n + 3] = a13;
 
-    P[2 * n] = a20;
-    P[2 * n + 1] = a21;
-    P[2 * n + 3] = a23;
-    P[2 * n + 4] = a24;
+    tempP[2 * n] = a20;
+    tempP[2 * n + 1] = a21;
+    tempP[2 * n + 3] = a23;
+    tempP[2 * n + 4] = a24;
 
-    P[(n - 3) * n + (n - 5)] = a24;
-    P[(n - 3) * n + (n - 4)] = a23;
-    P[(n - 3) * n + (n - 2)] = a21;
-    P[(n - 3) * n + (n - 1)] = a20;
+    tempP[(n - 3) * n + (n - 5)] = a24;
+    tempP[(n - 3) * n + (n - 4)] = a23;
+    tempP[(n - 3) * n + (n - 2)] = a21;
+    tempP[(n - 3) * n + (n - 1)] = a20;
 
-    P[(n - 2) * n + (n - 4)] = a13;
-    P[(n - 2) * n + (n - 3)] = a12;
-    P[(n - 2) * n + (n - 1)] = a10;
+    tempP[(n - 2) * n + (n - 4)] = a13;
+    tempP[(n - 2) * n + (n - 3)] = a12;
+    tempP[(n - 2) * n + (n - 1)] = a10;
 
-    P[(n - 1) * n + (n - 3)] = a02;
-    P[(n - 1) * n + (n - 2)] = a01;
+    tempP[(n - 1) * n + (n - 3)] = a02;
+    tempP[(n - 1) * n + (n - 2)] = a01;
+
+    // compute the transpose because i need to test this
+    // TODO: fix the actual population
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            P[INDEX_2D(i, j)] = tempP[INDEX_2D(j, i)];
+        }
+    }
+
+    delete[] tempP;
 }
 
 void HAMRDeriv4_dQ(double *Q, int n) {
+    double *tempQ = new double[n * n];
     // Seting the constants
     double a = 1.3069171114;
     double b = 0.9828406281;
@@ -116,79 +130,89 @@ void HAMRDeriv4_dQ(double *Q, int n) {
                 i * n + j;  // Calculate the 1D index for the (i, j) element
             if (i == j) {
                 // Main diagonal
-                Q[index] = 0.0;
+                tempQ[index] = 0.0;
             } else if (i == j - 1) {
                 // Adjacent diagonals
-                Q[index] = a / 2.0;
+                tempQ[index] = a / 2.0;
             } else if (i == j + 1) {
                 // Adjacent diagonals
-                Q[index] = -a / 2.0;
+                tempQ[index] = -a / 2.0;
             } else if (i == j - 2) {
                 // Super diagonals
-                Q[index] = b / 4.0;
+                tempQ[index] = b / 4.0;
             } else if (i == j + 2) {
                 // Super diagonals
-                Q[index] = -b / 4.0;
+                tempQ[index] = -b / 4.0;
             } else if (i == j - 3) {
                 // Super +1 diagonals
-                Q[index] = c / 6.0;
+                tempQ[index] = c / 6.0;
             } else if (i == j + 3) {
                 // Super +1 diagonals
-                Q[index] = -c / 6.0;
+                tempQ[index] = -c / 6.0;
             } else {
-                Q[index] = 0.0;
+                tempQ[index] = 0.0;
             }
         }
     }
 
     // Set specific values in the array
-    Q[0] = p00;
-    Q[1] = p01;
-    Q[2] = p02;
-    Q[3] = p03;
-    Q[4] = p04;
-    Q[5] = p05;
-    Q[6] = p06;
+    tempQ[0] = p00;
+    tempQ[1] = p01;
+    tempQ[2] = p02;
+    tempQ[3] = p03;
+    tempQ[4] = p04;
+    tempQ[5] = p05;
+    tempQ[6] = p06;
 
-    Q[n] = p10;
-    Q[n + 1] = p11;
-    Q[n + 2] = p12;
-    Q[n + 3] = p13;
-    Q[n + 4] = p14;
-    Q[n + 5] = p15;
-    Q[n + 6] = p16;
+    tempQ[n] = p10;
+    tempQ[n + 1] = p11;
+    tempQ[n + 2] = p12;
+    tempQ[n + 3] = p13;
+    tempQ[n + 4] = p14;
+    tempQ[n + 5] = p15;
+    tempQ[n + 6] = p16;
 
-    Q[2 * n] = p20;
-    Q[2 * n + 1] = p21;
-    Q[2 * n + 2] = p22;
-    Q[2 * n + 3] = p23;
-    Q[2 * n + 4] = p24;
-    Q[2 * n + 5] = p25;
-    Q[2 * n + 6] = p26;
+    tempQ[2 * n] = p20;
+    tempQ[2 * n + 1] = p21;
+    tempQ[2 * n + 2] = p22;
+    tempQ[2 * n + 3] = p23;
+    tempQ[2 * n + 4] = p24;
+    tempQ[2 * n + 5] = p25;
+    tempQ[2 * n + 6] = p26;
 
-    Q[(n - 3) * n + (n - 7)] = -p26;
-    Q[(n - 3) * n + (n - 6)] = -p25;
-    Q[(n - 3) * n + (n - 5)] = -p24;
-    Q[(n - 3) * n + (n - 4)] = -p23;
-    Q[(n - 3) * n + (n - 3)] = -p22;
-    Q[(n - 3) * n + (n - 2)] = -p21;
-    Q[(n - 3) * n + (n - 1)] = -p20;
+    tempQ[(n - 3) * n + (n - 7)] = -p26;
+    tempQ[(n - 3) * n + (n - 6)] = -p25;
+    tempQ[(n - 3) * n + (n - 5)] = -p24;
+    tempQ[(n - 3) * n + (n - 4)] = -p23;
+    tempQ[(n - 3) * n + (n - 3)] = -p22;
+    tempQ[(n - 3) * n + (n - 2)] = -p21;
+    tempQ[(n - 3) * n + (n - 1)] = -p20;
 
-    Q[(n - 2) * n + (n - 7)] = -p16;
-    Q[(n - 2) * n + (n - 6)] = -p15;
-    Q[(n - 2) * n + (n - 5)] = -p14;
-    Q[(n - 2) * n + (n - 4)] = -p13;
-    Q[(n - 2) * n + (n - 3)] = -p12;
-    Q[(n - 2) * n + (n - 2)] = -p11;
-    Q[(n - 2) * n + (n - 1)] = -p10;
+    tempQ[(n - 2) * n + (n - 7)] = -p16;
+    tempQ[(n - 2) * n + (n - 6)] = -p15;
+    tempQ[(n - 2) * n + (n - 5)] = -p14;
+    tempQ[(n - 2) * n + (n - 4)] = -p13;
+    tempQ[(n - 2) * n + (n - 3)] = -p12;
+    tempQ[(n - 2) * n + (n - 2)] = -p11;
+    tempQ[(n - 2) * n + (n - 1)] = -p10;
 
-    Q[(n - 1) * n + (n - 7)] = -p06;
-    Q[(n - 1) * n + (n - 6)] = -p05;
-    Q[(n - 1) * n + (n - 5)] = -p04;
-    Q[(n - 1) * n + (n - 4)] = -p03;
-    Q[(n - 1) * n + (n - 3)] = -p02;
-    Q[(n - 1) * n + (n - 2)] = -p01;
-    Q[(n - 1) * n + (n - 1)] = -p00;
+    tempQ[(n - 1) * n + (n - 7)] = -p06;
+    tempQ[(n - 1) * n + (n - 6)] = -p05;
+    tempQ[(n - 1) * n + (n - 5)] = -p04;
+    tempQ[(n - 1) * n + (n - 4)] = -p03;
+    tempQ[(n - 1) * n + (n - 3)] = -p02;
+    tempQ[(n - 1) * n + (n - 2)] = -p01;
+    tempQ[(n - 1) * n + (n - 1)] = -p00;
+
+    // compute the transpose because i need to test this
+    // TODO: fix the actual population
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            Q[INDEX_2D(i, j)] = tempQ[INDEX_2D(j, i)];
+        }
+    }
+
+    delete[] tempQ;
 }
 
 bool initHAMRDeriv4(double *R, const unsigned int n) {

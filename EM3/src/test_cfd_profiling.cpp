@@ -484,9 +484,9 @@ void profile_original_stencils(double_t *const u_var, const uint32_t *sz,
         deriv_use_y = &deriv644_y;
         deriv_use_z = &deriv644_z;
     } else if (helpers::padding == 4) {
-        deriv_use_x = &deriv8666_x;
-        deriv_use_y = &deriv8666_y;
-        deriv_use_z = &deriv8666_z;
+        deriv_use_x = &deriv8642_x;
+        deriv_use_y = &deriv8642_y;
+        deriv_use_z = &deriv8642_z;
     } else {
         // NOTE: this is now 5 points, so 10th order stencils which we just...
         // don't have haha

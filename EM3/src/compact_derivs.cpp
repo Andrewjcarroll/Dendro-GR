@@ -241,7 +241,7 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
     // std::cout << "Nx, ny, nz: " << nx << " " << ny << " " << nz << std::endl;
 
     char TRANSA = 'N';
-    
+
     int M = nx;
 #ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
     int N = ny;
@@ -252,7 +252,7 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
     int LDA = nx;
     int LDB = ny;
     int LDC = nx;
-    
+
     double *u_curr_chunk = (double *)u;
     double *du_curr_chunk = (double *)Dxu;
 #else
@@ -284,8 +284,8 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
         // thanks to memory layout, we can just... use this as a matrix
         // so we can just grab the "matrix" of ny x nx for this one
 
-        dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &LDA, u_curr_chunk, &LDB,
-               &beta, du_curr_chunk, &LDC);
+        dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &LDA,
+               u_curr_chunk, &LDB, &beta, du_curr_chunk, &LDC);
 
         u_curr_chunk += nx * ny;
         du_curr_chunk += nx * ny;
@@ -361,8 +361,8 @@ void CompactFiniteDiff::cfd_y(double *const Dyu, const double *const u,
         // thanks to memory layout, we can just... use this as a matrix
         // so we can just grab the "matrix" of ny x nx for this one
 
-        dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &M, u_curr_chunk, &K,
-               &beta, m_du2d, &M);
+        dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &M,
+               u_curr_chunk, &K, &beta, m_du2d, &M);
 
         // TODO: see if there's a faster way to copy (i.e. SSE?)
         // the data is transposed so it's much harder to just copy all at once
@@ -442,7 +442,8 @@ void CompactFiniteDiff::cfd_z(double *const Dzu, const double *const u,
             // }
 
 #ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
-            dgemv_(&TRANSA, &M, &K, &alpha, R_mat_use, &M, m_u1d, &N, &beta, m_du1d, &N);
+            dgemv_(&TRANSA, &M, &K, &alpha, R_mat_use, &M, m_u1d, &N, &beta,
+                   m_du1d, &N);
 #else
             dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &M, m_u1d,
                    &K, &beta, m_du1d, &M);
@@ -728,11 +729,9 @@ void buildPandQMatrices(double *P, double *Q, const uint32_t padding,
             }
         }
     } else if (derivtype == CFD_KIM_O4) {
-        // build Kim4 P
-        KimDeriv4_dP(tempP, curr_n);
+        // build Kim4 P and Q
 
-        // then build Q
-        KimDeriv4_dQ(tempQ, curr_n);
+        initializeKim4PQ(tempP, tempQ, curr_n);
     } else if (derivtype == CFD_HAMR_O4) {
         // build HAMR 4 P
         HAMRDeriv4_dP(tempP, curr_n);
@@ -808,12 +807,11 @@ void calculateDerivMatrix(double *D, double *P, double *Q, const int n) {
     }
 
     double *Pinv = new double[n * n];
-    for (int i = 0; i < n * n; i++) {
-        Pinv[i] = P[i];
-    }
+
+    // memcpy is faster than the for loops!
+    std::memcpy(Pinv, P, n * n * sizeof(double));
 
     int lwork = n * n;
-
     double *work = new double[lwork];
 
     dgetri_(&nx, Pinv, &nx, ipiv, work, &lwork, &info);
@@ -1317,6 +1315,273 @@ void buildMatrixRight(double *P, double *Q, int *xie, const DerType dtype,
     }
     // update xib
     *xie = ie;
+}
+
+void initializeKim4PQ(double *P, double *Q, int n) {
+    const double alpha = 0.5862704032801503;
+    const double beta = 9.549533555017055e-2;
+
+    const double a1 = 0.6431406736919156;
+    const double a2 = 0.2586011023495066;
+    const double a3 = 7.140953479797375e-3;
+
+    const double y00 = 0.0;
+    const double y10 = 8.360703307833438e-2;
+    const double y20 = 3.250008295108466e-2;
+    const double y01 = 5.912678614078549;
+    const double y11 = 0.0;
+    const double y21 = 0.3998040493524358;
+    const double y02 = 3.775623951744012;
+    const double y12 = 2.058102869495757;
+    const double y22 = 0.0;
+    const double y03 = 0.0;
+    const double y13 = 0.9704052014790193;
+    const double y23 = 0.7719261277615860;
+    const double y04 = 0.0;
+    const double y14 = 0.0;
+    const double y24 = 0.1626635931256900;
+
+    const double b10 = -0.3177447290722621;
+    const double b20 = -0.1219006056449124;
+    const double b01 = -3.456878182643609;
+    const double b21 = -0.6301651351188667;
+    const double b02 = 5.839043358834730;
+    const double b12 = -2.807631929593225e-2;
+    const double b03 = 1.015886726041007;
+    const double b13 = 1.593461635747659;
+    const double b23 = 0.6521195063966084;
+    const double b04 = -0.2246526470654333;
+    const double b14 = 0.2533027046976367;
+    const double b24 = 0.3938843551210350;
+    const double b05 = 8.564940889936562e-2;
+    const double b15 = -3.619652460174756e-2;
+    const double b25 = 1.904944407973912e-2;
+    const double b06 = -1.836710059356763e-2;
+    const double b16 = 4.080281419108407e-3;
+    const double b26 = -1.027260523947668e-3;
+
+    const double b00 = -(b01 + b02 + b03 + b04 + b05 + b06);
+    const double b11 = -(b10 + b12 + b13 + b14 + b15 + b16);
+    const double b22 = -(b20 + b21 + b23 + b24 + b25 + b26);
+
+    const int nd = n * n;
+
+    for (int i = 3; i < n - 3; i++) {
+        P[INDEX_2D(i, i - 2)] = beta;
+        P[INDEX_2D(i, i - 1)] = alpha;
+        P[INDEX_2D(i, i)] = 1.0;
+        P[INDEX_2D(i, i + 1)] = alpha;
+        P[INDEX_2D(i, i + 2)] = beta;
+    }
+
+    P[INDEX_2D(0, 0)] = 1.0;
+    P[INDEX_2D(0, 1)] = y01;
+    P[INDEX_2D(0, 2)] = y02;
+
+    P[INDEX_2D(1, 0)] = y10;
+    P[INDEX_2D(1, 1)] = 1.0;
+    P[INDEX_2D(1, 2)] = y12;
+    P[INDEX_2D(1, 3)] = y13;
+
+    P[INDEX_2D(2, 0)] = y20;
+    P[INDEX_2D(2, 1)] = y21;
+    P[INDEX_2D(2, 2)] = 1.0;
+    P[INDEX_2D(2, 3)] = y23;
+    P[INDEX_2D(2, 4)] = y24;
+
+    P[INDEX_2D(n - 3, n - 5)] = y24;
+    P[INDEX_2D(n - 3, n - 4)] = y23;
+    P[INDEX_2D(n - 3, n - 3)] = 1.0;
+    P[INDEX_2D(n - 3, n - 2)] = y21;
+    P[INDEX_2D(n - 3, n - 1)] = y20;
+
+    P[INDEX_2D(n - 2, n - 4)] = y13;
+    P[INDEX_2D(n - 2, n - 3)] = y12;
+    P[INDEX_2D(n - 2, n - 2)] = 1.0;
+    P[INDEX_2D(n - 2, n - 1)] = y10;
+
+    P[INDEX_2D(n - 1, n - 3)] = y02;
+    P[INDEX_2D(n - 1, n - 2)] = y01;
+    P[INDEX_2D(n - 1, n - 1)] = 1.0;
+
+    for (int i = 3; i < n - 3; i++) {
+        Q[INDEX_2D(i, i - 3)] = -a3;
+        Q[INDEX_2D(i, i - 2)] = -a2;
+        Q[INDEX_2D(i, i - 1)] = -a1;
+        Q[INDEX_2D(i, i)] = 0.0;
+        Q[INDEX_2D(i, i + 1)] = a1;
+        Q[INDEX_2D(i, i + 2)] = a2;
+        Q[INDEX_2D(i, i + 3)] = a3;
+    }
+
+    Q[INDEX_2D(0, 0)] = b00;
+    Q[INDEX_2D(0, 1)] = b01;
+    Q[INDEX_2D(0, 2)] = b02;
+    Q[INDEX_2D(0, 3)] = b03;
+    Q[INDEX_2D(0, 4)] = b04;
+    Q[INDEX_2D(0, 5)] = b05;
+    Q[INDEX_2D(0, 6)] = b06;
+
+    Q[INDEX_2D(1, 0)] = b10;
+    Q[INDEX_2D(1, 1)] = b11;
+    Q[INDEX_2D(1, 2)] = b12;
+    Q[INDEX_2D(1, 3)] = b13;
+    Q[INDEX_2D(1, 4)] = b14;
+    Q[INDEX_2D(1, 5)] = b15;
+    Q[INDEX_2D(1, 6)] = b16;
+
+    Q[INDEX_2D(2, 0)] = b20;
+    Q[INDEX_2D(2, 1)] = b21;
+    Q[INDEX_2D(2, 2)] = b22;
+    Q[INDEX_2D(2, 3)] = b23;
+    Q[INDEX_2D(2, 4)] = b24;
+    Q[INDEX_2D(2, 5)] = b25;
+    Q[INDEX_2D(2, 6)] = b26;
+
+    Q[INDEX_2D(n - 3, n - 1)] = -b20;
+    Q[INDEX_2D(n - 3, n - 2)] = -b21;
+    Q[INDEX_2D(n - 3, n - 3)] = -b22;
+    Q[INDEX_2D(n - 3, n - 4)] = -b23;
+    Q[INDEX_2D(n - 3, n - 5)] = -b24;
+    Q[INDEX_2D(n - 3, n - 6)] = -b25;
+    Q[INDEX_2D(n - 3, n - 7)] = -b26;
+
+    Q[INDEX_2D(n - 2, n - 1)] = -b10;
+    Q[INDEX_2D(n - 2, n - 2)] = -b11;
+    Q[INDEX_2D(n - 2, n - 3)] = -b12;
+    Q[INDEX_2D(n - 2, n - 4)] = -b13;
+    Q[INDEX_2D(n - 2, n - 5)] = -b14;
+    Q[INDEX_2D(n - 2, n - 6)] = -b15;
+    Q[INDEX_2D(n - 2, n - 7)] = -b16;
+
+    Q[INDEX_2D(n - 1, n - 1)] = -b00;
+    Q[INDEX_2D(n - 1, n - 2)] = -b01;
+    Q[INDEX_2D(n - 1, n - 3)] = -b02;
+    Q[INDEX_2D(n - 1, n - 4)] = -b03;
+    Q[INDEX_2D(n - 1, n - 5)] = -b04;
+    Q[INDEX_2D(n - 1, n - 6)] = -b05;
+    Q[INDEX_2D(n - 1, n - 7)] = -b06;
+}
+
+void initializeKim6FilterPQ(double *P, double *Q, int n) {
+    const double alphaF = 0.6651452077642562;
+    const double betaF = 0.1669709584471488;
+    const double aF1 = 8.558206326059179e-4;
+    const double aF2 = -3.423282530423672e-4;
+    const double aF3 = 5.705470884039454e-5;
+    const double aF0 = -2.0 * (aF1 + aF2 + aF3);
+
+    const double yF00 = 0.0;
+    const double yF10 = 0.7311329755609861;
+    const double yF20 = 0.1681680891936087;
+    const double yF01 = 0.3412746505356879;
+    const double yF11 = 0.0;
+    const double yF21 = 0.6591595540319565;
+    const double yF02 = 0.2351300295562464;
+    const double yF12 = 0.6689728401317021;
+    const double yF22 = 0.0;
+    const double yF03 = 0.0;
+    const double yF13 = 0.1959510121583215;
+    const double yF23 = 0.6591595540319565;
+    const double yF04 = 0.0;
+    const double yF14 = 0.0;
+    const double yF24 = 0.1681680891936087;
+
+    const double bF20 = -2.81516723801634e-4;
+    const double bF21 = 1.40758361900817e-3;
+    const double bF23 = 2.81516723801634e-3;
+    const double bF24 = -1.40758361900817e-3;
+    const double bF25 = 2.81516723801634e-4;
+    const double bF22 = -(bF20 + bF21 + bF23 + bF24 + bF25);
+
+    const int nd = n * n;
+
+    for (int i = 3; i < n - 3; i++) {
+        P[INDEX_2D(i, i - 2)] = betaF;
+        P[INDEX_2D(i, i - 1)] = alphaF;
+        P[INDEX_2D(i, i)] = 1.0;
+        P[INDEX_2D(i, i + 1)] = alphaF;
+        P[INDEX_2D(i, i + 2)] = betaF;
+    }
+
+    P[INDEX_2D(0, 0)] = 1.0;
+    P[INDEX_2D(0, 1)] = yF01;
+    P[INDEX_2D(0, 2)] = yF02;
+
+    P[INDEX_2D(1, 0)] = yF10;
+    P[INDEX_2D(1, 1)] = 1.0;
+    P[INDEX_2D(1, 2)] = yF12;
+    P[INDEX_2D(1, 3)] = yF13;
+
+    P[INDEX_2D(2, 0)] = yF20;
+    P[INDEX_2D(2, 1)] = yF21;
+    P[INDEX_2D(2, 2)] = 1.0;
+    P[INDEX_2D(2, 3)] = yF23;
+    P[INDEX_2D(2, 4)] = yF24;
+
+    P[INDEX_2D(n - 3, n - 5)] = yF24;
+    P[INDEX_2D(n - 3, n - 4)] = yF23;
+    P[INDEX_2D(n - 3, n - 3)] = 1.0;
+    P[INDEX_2D(n - 3, n - 2)] = yF21;
+    P[INDEX_2D(n - 3, n - 1)] = yF20;
+
+    P[INDEX_2D(n - 2, n - 4)] = yF13;
+    P[INDEX_2D(n - 2, n - 3)] = yF12;
+    P[INDEX_2D(n - 2, n - 2)] = 1.0;
+    P[INDEX_2D(n - 2, n - 1)] = yF10;
+
+    P[INDEX_2D(n - 1, n - 3)] = yF02;
+    P[INDEX_2D(n - 1, n - 2)] = yF01;
+    P[INDEX_2D(n - 1, n - 1)] = 1.0;
+
+    for (int i = 0; i < nd; i++) {
+        Q[i] = 0.0;
+    }
+    for (int i = 3; i < n - 3; i++) {
+        Q[INDEX_2D(i, i - 3)] = aF3;
+        Q[INDEX_2D(i, i - 2)] = aF2;
+        Q[INDEX_2D(i, i - 1)] = aF1;
+        Q[INDEX_2D(i, i)] = aF0;
+        Q[INDEX_2D(i, i + 1)] = aF1;
+        Q[INDEX_2D(i, i + 2)] = aF2;
+        Q[INDEX_2D(i, i + 3)] = aF3;
+    }
+
+    Q[INDEX_2D(0, 0)] = 0.0;
+    Q[INDEX_2D(0, 1)] = 0.0;
+    Q[INDEX_2D(0, 2)] = 0.0;
+    Q[INDEX_2D(0, 3)] = 0.0;
+
+    Q[INDEX_2D(1, 0)] = 0.0;
+    Q[INDEX_2D(1, 1)] = 0.0;
+    Q[INDEX_2D(1, 2)] = 0.0;
+    Q[INDEX_2D(1, 3)] = 0.0;
+    Q[INDEX_2D(1, 4)] = 0.0;
+
+    Q[INDEX_2D(2, 0)] = bF20;
+    Q[INDEX_2D(2, 1)] = bF21;
+    Q[INDEX_2D(2, 2)] = bF22;
+    Q[INDEX_2D(2, 3)] = bF23;
+    Q[INDEX_2D(2, 4)] = bF24;
+    Q[INDEX_2D(2, 5)] = bF25;
+
+    Q[INDEX_2D(n - 3, n - 6)] = bF25;
+    Q[INDEX_2D(n - 3, n - 5)] = bF24;
+    Q[INDEX_2D(n - 3, n - 4)] = bF23;
+    Q[INDEX_2D(n - 3, n - 3)] = bF22;
+    Q[INDEX_2D(n - 3, n - 2)] = bF21;
+    Q[INDEX_2D(n - 3, n - 1)] = bF20;
+
+    Q[INDEX_2D(n - 2, n - 5)] = 0.0;
+    Q[INDEX_2D(n - 2, n - 4)] = 0.0;
+    Q[INDEX_2D(n - 2, n - 3)] = 0.0;
+    Q[INDEX_2D(n - 2, n - 2)] = 0.0;
+    Q[INDEX_2D(n - 2, n - 1)] = 0.0;
+
+    Q[INDEX_2D(n - 1, n - 4)] = 0.0;
+    Q[INDEX_2D(n - 1, n - 3)] = 0.0;
+    Q[INDEX_2D(n - 1, n - 2)] = 0.0;
+    Q[INDEX_2D(n - 1, n - 1)] = 0.0;
 }
 
 void print_square_mat(double *m, const uint32_t n) {
