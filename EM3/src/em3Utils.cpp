@@ -22,6 +22,7 @@ void readParamFile(const char* fName, MPI_Comm comm) {
     unsigned int prf_len;
 
     unsigned int temp_EM3_DERIV_TYPE;
+    unsigned int temp_EM3_FILTER_TYPE;
 
     if (!rank) {
         std::ifstream infile(fName);
@@ -74,8 +75,7 @@ void readParamFile(const char* fName, MPI_Comm comm) {
         };
 
         temp_EM3_DERIV_TYPE = parFile["EM3_DERIV_TYPE"];
-
-        em3::EM3_FILTER_TYPE = parFile["EM3_FILTER_TYPE"];
+        temp_EM3_FILTER_TYPE = parFile["EM3_FILTER_TYPE"];
 
         em3::EM3_ID_TYPE = parFile["EM3_ID_TYPE"];
         em3::EM3_ID_AMP1 = parFile["EM3_ID_AMP1"];
@@ -207,10 +207,10 @@ void readParamFile(const char* fName, MPI_Comm comm) {
     par::Mpi_Bcast(&EM3_MAXDEPTH, 1, 0, comm);
 
     par::Mpi_Bcast(&temp_EM3_DERIV_TYPE, 1, 0, comm);
-
     em3::EM3_DERIV_TYPE = static_cast<dendro_cfd::DerType>(temp_EM3_DERIV_TYPE);
 
-    par::Mpi_Bcast(&EM3_FILTER_TYPE, 1, 0, comm);
+    par::Mpi_Bcast(&temp_EM3_FILTER_TYPE, 1, 0, comm);
+    em3::EM3_FILTER_TYPE = static_cast<dendro_cfd::FilterType>(temp_EM3_FILTER_TYPE);
 
     par::Mpi_Bcast(&EM3_ID_TYPE, 1, 0, comm);
     par::Mpi_Bcast(&EM3_ID_AMP1, 1, 0, comm);

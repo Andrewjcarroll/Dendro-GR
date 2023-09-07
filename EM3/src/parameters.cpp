@@ -86,7 +86,7 @@ namespace em3
     unsigned int EM3_VTU_OUTPUT_CONST_INDICES[EM3_CONSTRAINT_NUM_VARS]={0,1};
 
     dendro_cfd::DerType EM3_DERIV_TYPE=static_cast<dendro_cfd::DerType>(-1);
-    unsigned int EM3_FILTER_TYPE=0;
+    dendro_cfd::FilterType EM3_FILTER_TYPE=dendro_cfd::FilterType::FILT_KO_DISS;
 
     double EM3_ID_AMP1 = 0.5;
     double EM3_ID_AMP2 = 0.5;

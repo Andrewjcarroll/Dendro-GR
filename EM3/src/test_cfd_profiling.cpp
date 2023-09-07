@@ -352,6 +352,9 @@ void test_cfd_with_original_stencil(double_t *const u_var, const uint32_t *sz,
     deriv_use_y(derivy_stencil, u_var, deltas[1], sz, bflag);
     deriv_use_z(derivz_stencil, u_var, deltas[2], sz, bflag);
 
+    cfd->filter_cfd_x(u_var, derivx_cfd, deltas[0], sz, bflag);
+    cfd->filter_cfd_y(u_var, derivy_cfd, deltas[0], sz, bflag);
+    cfd->filter_cfd_z(u_var, derivz_cfd, deltas[0], sz, bflag);
     cfd->cfd_x(derivx_cfd, u_var, deltas[0], sz, bflag);
     cfd->cfd_y(derivy_cfd, u_var, deltas[1], sz, bflag);
     cfd->cfd_z(derivz_cfd, u_var, deltas[2], sz, bflag);
@@ -536,7 +539,7 @@ void profile_original_stencils(double_t *const u_var, const uint32_t *sz,
 int main(int argc, char **argv) {
     uint32_t eleorder = 8;
     dendro_cfd::DerType deriv_type = dendro_cfd::CFD_KIM_O4;
-    uint32_t filter_type = 0;
+    dendro_cfd::FilterType filter_type = dendro_cfd::FILT_NONE;
     uint32_t num_tests = 1000;
     uint32_t data_init = 2;
 
@@ -562,7 +565,8 @@ int main(int argc, char **argv) {
         deriv_type = static_cast<dendro_cfd::DerType>(temp_deriv_type);
     }
     if (argc > 3) {
-        filter_type = atoi(argv[3]);
+        uint32_t temp_filt_type = atoi(argv[3]);
+        filter_type = static_cast<dendro_cfd::FilterType>(temp_filt_type);
     }
     if (argc > 4) {
         num_tests = atoi(argv[4]);
@@ -607,9 +611,9 @@ int main(int argc, char **argv) {
     test_cfd_with_original_stencil((double_t *const)u_var, sz, deltas, &cfd,
                                    u_dx_true, u_dy_true, u_dz_true);
 
-    profile_original_stencils((double_t *const)u_var, sz, deltas, num_tests);
+    // profile_original_stencils((double_t *const)u_var, sz, deltas, num_tests);
 
-    profile_compact_stencils((double_t *const)u_var, sz, deltas, &cfd, num_tests);
+    // profile_compact_stencils((double_t *const)u_var, sz, deltas, &cfd, num_tests);
 
     // then print the profiler results
     helpers::print_profiler_results(num_tests);

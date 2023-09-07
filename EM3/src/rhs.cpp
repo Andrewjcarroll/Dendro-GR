@@ -324,32 +324,33 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
 
     em3::timer::t_deriv.start();
 
-    if (bflag == 0) {
+    if (em3::EM3_FILTER_TYPE != FILT_KO_DISS or
+        em3::EM3_FILTER_TYPE != FILT_NONE) {
         // NOTE: the bflag check here is because we currently can't filter
         // boundaries!
-        // cfd.filter_cfd_x(E0, hx, sz, bflag);
-        // cfd.filter_cfd_y(E0, hy, sz, bflag);
-        // cfd.filter_cfd_z(E0, hz, sz, bflag);
+        cfd.filter_cfd_x(E0, grad_0_E0, hx, sz, bflag);
+        cfd.filter_cfd_y(E0, grad_0_E0, hy, sz, bflag);
+        cfd.filter_cfd_z(E0, grad_0_E0, hz, sz, bflag);
 
-        // cfd.filter_cfd_x(E1, hx, sz, bflag);
-        // cfd.filter_cfd_y(E1, hy, sz, bflag);
-        // cfd.filter_cfd_z(E1, hz, sz, bflag);
+        cfd.filter_cfd_x(E1, grad_0_E0, hx, sz, bflag);
+        cfd.filter_cfd_y(E1, grad_0_E0, hy, sz, bflag);
+        cfd.filter_cfd_z(E1, grad_0_E0, hz, sz, bflag);
 
-        // cfd.filter_cfd_x(E2, hx, sz, bflag);
-        // cfd.filter_cfd_y(E2, hy, sz, bflag);
-        // cfd.filter_cfd_z(E2, hz, sz, bflag);
+        cfd.filter_cfd_x(E2, grad_0_E0, hx, sz, bflag);
+        cfd.filter_cfd_y(E2, grad_0_E0, hy, sz, bflag);
+        cfd.filter_cfd_z(E2, grad_0_E0, hz, sz, bflag);
 
-        // cfd.filter_cfd_x(B0, hx, sz, bflag);
-        // cfd.filter_cfd_y(B0, hy, sz, bflag);
-        // cfd.filter_cfd_z(B0, hz, sz, bflag);
+        cfd.filter_cfd_x(B0, grad_0_E0, hx, sz, bflag);
+        cfd.filter_cfd_y(B0, grad_0_E0, hy, sz, bflag);
+        cfd.filter_cfd_z(B0, grad_0_E0, hz, sz, bflag);
 
-        // cfd.filter_cfd_x(B1, hx, sz, bflag);
-        // cfd.filter_cfd_y(B1, hy, sz, bflag);
-        // cfd.filter_cfd_z(B1, hz, sz, bflag);
+        cfd.filter_cfd_x(B1, grad_0_E0, hx, sz, bflag);
+        cfd.filter_cfd_y(B1, grad_0_E0, hy, sz, bflag);
+        cfd.filter_cfd_z(B1, grad_0_E0, hz, sz, bflag);
 
-        // cfd.filter_cfd_x(B2, hx, sz, bflag);
-        // cfd.filter_cfd_y(B2, hy, sz, bflag);
-        // cfd.filter_cfd_z(B2, hz, sz, bflag);
+        cfd.filter_cfd_x(B2, grad_0_E0, hx, sz, bflag);
+        cfd.filter_cfd_y(B2, grad_0_E0, hy, sz, bflag);
+        cfd.filter_cfd_z(B2, grad_0_E0, hz, sz, bflag);
     }
 
     if (em3::EM3_DERIV_TYPE == CFD_NONE) {
@@ -479,64 +480,66 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
         em3::timer::t_bdyc.stop();
     }
 
-    // START TEMP KO DISS
-    // TEMP: adding KO diss since the filtering is currently not working!
-    em3::timer::t_deriv.start();
+    if (em3::EM3_FILTER_TYPE == FILT_KO_DISS) {
+        // START TEMP KO DISS
+        // TEMP: adding KO diss since the filtering is currently not working!
+        em3::timer::t_deriv.start();
 
-    ko_deriv_x(grad_0_E0, E0, hx, sz, bflag);
-    ko_deriv_y(grad_1_E0, E0, hy, sz, bflag);
-    ko_deriv_z(grad_2_E0, E0, hz, sz, bflag);
+        ko_deriv_x(grad_0_E0, E0, hx, sz, bflag);
+        ko_deriv_y(grad_1_E0, E0, hy, sz, bflag);
+        ko_deriv_z(grad_2_E0, E0, hz, sz, bflag);
 
-    ko_deriv_x(grad_0_E1, E1, hx, sz, bflag);
-    ko_deriv_y(grad_1_E1, E1, hy, sz, bflag);
-    ko_deriv_z(grad_2_E1, E1, hz, sz, bflag);
+        ko_deriv_x(grad_0_E1, E1, hx, sz, bflag);
+        ko_deriv_y(grad_1_E1, E1, hy, sz, bflag);
+        ko_deriv_z(grad_2_E1, E1, hz, sz, bflag);
 
-    ko_deriv_x(grad_0_E2, E2, hx, sz, bflag);
-    ko_deriv_y(grad_1_E2, E2, hy, sz, bflag);
-    ko_deriv_z(grad_2_E2, E2, hz, sz, bflag);
+        ko_deriv_x(grad_0_E2, E2, hx, sz, bflag);
+        ko_deriv_y(grad_1_E2, E2, hy, sz, bflag);
+        ko_deriv_z(grad_2_E2, E2, hz, sz, bflag);
 
-    ko_deriv_x(grad_0_B0, B0, hx, sz, bflag);
-    ko_deriv_y(grad_1_B0, B0, hy, sz, bflag);
-    ko_deriv_z(grad_2_B0, B0, hz, sz, bflag);
+        ko_deriv_x(grad_0_B0, B0, hx, sz, bflag);
+        ko_deriv_y(grad_1_B0, B0, hy, sz, bflag);
+        ko_deriv_z(grad_2_B0, B0, hz, sz, bflag);
 
-    ko_deriv_x(grad_0_B1, B1, hx, sz, bflag);
-    ko_deriv_y(grad_1_B1, B1, hy, sz, bflag);
-    ko_deriv_z(grad_2_B1, B1, hz, sz, bflag);
+        ko_deriv_x(grad_0_B1, B1, hx, sz, bflag);
+        ko_deriv_y(grad_1_B1, B1, hy, sz, bflag);
+        ko_deriv_z(grad_2_B1, B1, hz, sz, bflag);
 
-    ko_deriv_x(grad_0_B2, B2, hx, sz, bflag);
-    ko_deriv_y(grad_1_B2, B2, hy, sz, bflag);
-    ko_deriv_z(grad_2_B2, B2, hz, sz, bflag);
+        ko_deriv_x(grad_0_B2, B2, hx, sz, bflag);
+        ko_deriv_y(grad_1_B2, B2, hy, sz, bflag);
+        ko_deriv_z(grad_2_B2, B2, hz, sz, bflag);
 
-    em3::timer::t_deriv.stop();
+        em3::timer::t_deriv.stop();
 
-    em3::timer::t_rhs.start();
+        em3::timer::t_rhs.start();
 
-    const double sigma = KO_DISS_SIGMA;
+        const double sigma = KO_DISS_SIGMA;
 
-    for (unsigned int k = PW; k < nz - PW; k++) {
-        for (unsigned int j = PW; j < ny - PW; j++) {
-            for (unsigned int i = PW; i < nx - PW; i++) {
-                pp = i + nx * (j + ny * k);
+        for (unsigned int k = PW; k < nz - PW; k++) {
+            for (unsigned int j = PW; j < ny - PW; j++) {
+                for (unsigned int i = PW; i < nx - PW; i++) {
+                    pp = i + nx * (j + ny * k);
 
-                E_rhs0[pp] +=
-                    sigma * (grad_0_E0[pp] + grad_1_E0[pp] + grad_2_E0[pp]);
-                E_rhs1[pp] +=
-                    sigma * (grad_0_E1[pp] + grad_1_E1[pp] + grad_2_E1[pp]);
-                E_rhs2[pp] +=
-                    sigma * (grad_0_E2[pp] + grad_1_E2[pp] + grad_2_E2[pp]);
+                    E_rhs0[pp] +=
+                        sigma * (grad_0_E0[pp] + grad_1_E0[pp] + grad_2_E0[pp]);
+                    E_rhs1[pp] +=
+                        sigma * (grad_0_E1[pp] + grad_1_E1[pp] + grad_2_E1[pp]);
+                    E_rhs2[pp] +=
+                        sigma * (grad_0_E2[pp] + grad_1_E2[pp] + grad_2_E2[pp]);
 
-                B_rhs0[pp] +=
-                    sigma * (grad_0_B0[pp] + grad_1_B0[pp] + grad_2_B0[pp]);
-                B_rhs1[pp] +=
-                    sigma * (grad_0_B1[pp] + grad_1_B1[pp] + grad_2_B1[pp]);
-                B_rhs2[pp] +=
-                    sigma * (grad_0_B2[pp] + grad_1_B2[pp] + grad_2_B2[pp]);
+                    B_rhs0[pp] +=
+                        sigma * (grad_0_B0[pp] + grad_1_B0[pp] + grad_2_B0[pp]);
+                    B_rhs1[pp] +=
+                        sigma * (grad_0_B1[pp] + grad_1_B1[pp] + grad_2_B1[pp]);
+                    B_rhs2[pp] +=
+                        sigma * (grad_0_B2[pp] + grad_1_B2[pp] + grad_2_B2[pp]);
+                }
             }
         }
-    }
 
-    em3::timer::t_rhs.stop();
-    // END TEMP KO DISS
+        em3::timer::t_rhs.stop();
+        // END TEMP KO DISS
+    }
 
     em3::timer::t_deriv.start();
 
