@@ -67,9 +67,23 @@ enum DerType {
 
 };
 
+enum FilterType {
+    // NO CFD Initialization
+    FILT_NONE = -1,
+
+    // isotropic finite difference types
+    FILT_KIM_6,
+    FILT_JT_6,
+    FILT_JT_8,
+
+    // standard filters...
+    FILT_KO_DISS,
+};
+
 // NOTE: these are going to be used as global parameters if they're not physical
 enum BoundaryType {
-    BLOCK_CFD_CLOSURE = 0, // closure gives better results but 6th requires 4 points, and 4th requires 3 points
+    BLOCK_CFD_CLOSURE = 0,  // closure gives better results but 6th requires 4
+                            // points, and 4th requires 3 points
     BLOCK_CFD_DIRICHLET,
     BLOCK_CFD_LOPSIDE_CLOSURE,
     BLOCK_PHYS_BOUNDARY
@@ -178,6 +192,11 @@ void buildPandQMatrices(double *P, double *Q, const uint32_t padding,
                         const bool is_left_edge = false,
                         const bool is_right_edge = false);
 
+void buildPandQFilterMatrices(double *P, double *Q, const uint32_t padding,
+                              const uint32_t n, const FilterType derivtype,
+                              const bool is_left_edge = false,
+                              const bool is_right_edge = false);
+
 void buildMatrixLeft(double *P, double *Q, int *xib, const DerType dtype,
                      const int nghosts, const int n);
 
@@ -194,22 +213,22 @@ void setArrToZero(double *Mat, const int n);
 */
 void mulMM(double *C, double *A, double *B, int na, int nb);
 
-
-
-
-
 class CompactFiniteDiff {
    private:
     // STORAGE VARIABLES USED FOR THE DIFFERENT DIMENSIONS
     // Assume that the blocks are all the same size (to start with)
-    double *m_RF = nullptr;
+    double *m_R_filter = nullptr;
     double *m_R = nullptr;
 
     // we also need "left" physical edge, and "right" physical edge
     // and "both" physical edges to be safe
     double *m_R_left = nullptr;
     double *m_R_right = nullptr;
-    double *m_r_leftright = nullptr;
+    double *m_R_leftright = nullptr;
+
+    double *m_R_filter_left = nullptr;
+    double *m_R_filter_right = nullptr;
+    double *m_R_filter_leftright = nullptr;
 
     // TODO: we're going to want to store the filter and R variables as hash
     // maps
@@ -230,7 +249,7 @@ class CompactFiniteDiff {
     // storing the derivative and filter types internally
     // could just be the parameter types
     DerType m_deriv_type = CFD_KIM_O4;
-    unsigned int m_filter_type = 0;
+    FilterType m_filter_type = FILT_NONE;
     unsigned int m_curr_dim_size = 0;
     unsigned int m_padding_size = 0;
 
@@ -238,7 +257,7 @@ class CompactFiniteDiff {
     CompactFiniteDiff(const unsigned int dim_size,
                       const unsigned int padding_size,
                       const DerType deriv_type = CFD_KIM_O4,
-                      const unsigned int filter_type = 0);
+                      const FilterType filter_type = FILT_NONE);
     ~CompactFiniteDiff();
 
     void change_dim_size(const unsigned int dim_size);
@@ -248,7 +267,7 @@ class CompactFiniteDiff {
     void initialize_cfd_filter();
     void delete_cfd_matrices();
 
-    void set_filter_type(const unsigned int filter_type) {
+    void set_filter_type(FilterType filter_type) {
         m_filter_type = filter_type;
     }
 
@@ -268,8 +287,9 @@ class CompactFiniteDiff {
     }
 
     /**
-     * Sets the padding size. NOTE however that this does *not* attempt to regenerate the matrices, so be sure to call the initialization
-    */
+     * Sets the padding size. NOTE however that this does *not* attempt to
+     * regenerate the matrices, so be sure to call the initialization
+     */
     void set_padding_size(const unsigned int padding_size) {
         m_padding_size = padding_size;
     }
@@ -283,49 +303,48 @@ class CompactFiniteDiff {
                const unsigned int *sz, unsigned bflag);
 
     // then the actual filters
-    void filter_cfd_x(double *const u, const double dx, const unsigned int *sz,
-                      unsigned bflag);
-    void filter_cfd_y(double *const u, const double dx, const unsigned int *sz,
-                      unsigned bflag);
-    void filter_cfd_z(double *const u, const double dz, const unsigned int *sz,
-                      unsigned bflag);
+    void filter_cfd_x(double *const u, double *const filtx_work,
+                      const double dx, const unsigned int *sz, unsigned bflag);
+    void filter_cfd_y(double *const u, double *const filty_work,
+                      const double dy, const unsigned int *sz, unsigned bflag);
+    void filter_cfd_z(double *const u, double *const filtz_work,
+                      const double dz, const unsigned int *sz, unsigned bflag);
 };
 
 extern CompactFiniteDiff cfd;
 
-
-
 /**
  * Initialization of various Compact Methods
- * 
- * From this point on various compact finite methods can be calculated and derived
-*/
+ *
+ * From this point on various compact finite methods can be calculated and
+ * derived
+ */
 
 /**
- * Initialization of the P and Q matrices for Kim's 4th Order Compact Derivatives
- * 
+ * Initialization of the P and Q matrices for Kim's 4th Order Compact
+ * Derivatives
+ *
  * P and Q are assumed to **already by zeroed out**.
- * 
+ *
  * These derivative coefficients come from Tables I and II of :
- * 
- * Jae Wook Kim, "Quasi-disjoint pentadiagonal matrix systems for 
- * the parallelization of compact finite-difference schemes and 
+ *
+ * Jae Wook Kim, "Quasi-disjoint pentadiagonal matrix systems for
+ * the parallelization of compact finite-difference schemes and
  * filters," Journal of Computational Physics 241 (2013) 168–194.
-*/
+ */
 void initializeKim4PQ(double *P, double *Q, int n);
-
 
 /**
  * Initialization of the P and Q matrices for Kim's 6th Order Compact Filter
- * 
+ *
  * P and Q are assumed to **already by zeroed out**.
- * 
+ *
  * These filter coefficients come from Tables III and IV of :
- * 
- * Jae Wook Kim, "Quasi-disjoint pentadiagonal matrix systems for 
- * the parallelization of compact finite-difference schemes and 
+ *
+ * Jae Wook Kim, "Quasi-disjoint pentadiagonal matrix systems for
+ * the parallelization of compact finite-difference schemes and
  * filters," Journal of Computational Physics 241 (2013) 168–194.
-*/
-void initializeKim6FilterPQ(double *P, double* Q, int n);
+ */
+void initializeKim6FilterPQ(double *P, double *Q, int n);
 
 }  // namespace dendro_cfd

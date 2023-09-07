@@ -1,6 +1,6 @@
 #include "compact_derivs.h"
 
-// #define FASTER_DERIV_CALC_VIA_MATRIX_MULT
+#define FASTER_DERIV_CALC_VIA_MATRIX_MULT
 
 namespace dendro_cfd {
 
@@ -10,7 +10,7 @@ CompactFiniteDiff cfd(0, 0);
 CompactFiniteDiff::CompactFiniteDiff(const unsigned int num_dim,
                                      const unsigned int padding_size,
                                      const DerType deriv_type,
-                                     const unsigned int filter_type) {
+                                     const FilterType filter_type) {
     if (deriv_type != CFD_NONE && deriv_type != CFD_P1_O4 &&
         deriv_type != CFD_P1_O6 && deriv_type != CFD_Q1_O6_ETA1 &&
         deriv_type != CFD_KIM_O4 && deriv_type != CFD_HAMR_O4 &&
@@ -67,12 +67,15 @@ void CompactFiniteDiff::change_dim_size(const unsigned int dim_size) {
 
 void CompactFiniteDiff::initialize_cfd_storage() {
     // NOTE: 0 indicates that it's initialized with all elements set to 0
-    m_RF = new double[m_curr_dim_size * m_curr_dim_size]();
-
     m_R = new double[m_curr_dim_size * m_curr_dim_size]();
     m_R_left = new double[m_curr_dim_size * m_curr_dim_size]();
     m_R_right = new double[m_curr_dim_size * m_curr_dim_size]();
-    m_r_leftright = new double[m_curr_dim_size * m_curr_dim_size]();
+    m_R_leftright = new double[m_curr_dim_size * m_curr_dim_size]();
+
+    m_R_filter = new double[m_curr_dim_size * m_curr_dim_size]();
+    m_R_filter_left = new double[m_curr_dim_size * m_curr_dim_size]();
+    m_R_filter_right = new double[m_curr_dim_size * m_curr_dim_size]();
+    m_R_filter_leftright = new double[m_curr_dim_size * m_curr_dim_size]();
 
     // NOTE: the () syntax only works with C++ 11 or greater, may need to
     // use std::fill_n(array, n, 0); to 0 set the data or use std::memset(array,
@@ -171,11 +174,11 @@ void CompactFiniteDiff::initialize_cfd_matrix() {
     print_square_mat(Q, m_curr_dim_size);
 #endif
 
-    calculateDerivMatrix(m_r_leftright, P, Q, m_curr_dim_size);
+    calculateDerivMatrix(m_R_leftright, P, Q, m_curr_dim_size);
 
 #ifdef PRINT_COMPACT_MATRICES
     std::cout << "\nLEFTRIGHT DERIV MATRIX" << std::endl;
-    print_square_mat(m_r_leftright, m_curr_dim_size);
+    print_square_mat(m_R_leftright, m_curr_dim_size);
 #endif
 
     delete[] P;
@@ -183,44 +186,102 @@ void CompactFiniteDiff::initialize_cfd_matrix() {
 }
 
 void CompactFiniteDiff::initialize_cfd_filter() {
-    switch (m_filter_type) {
-        case 0:
-            // do nothing
-            break;
-        case 1:
-            if (initKim_Filter_Deriv4(m_RF, m_curr_dim_size)) {
-                // failed to initialize again
-                std::cerr << RED
-                          << "ERROR: could not construct the Kim Deriv4 Filter "
-                             "matrix!"
-                          << std::endl;
-                exit(0);
-            }
-
-        default:
-            break;
+    // exit early on filter none
+    if (m_filter_type == FILT_NONE) {
+        return;
     }
 
-    // // Print the RF matrix
-    // MPI_Comm comm = MPI_COMM_WORLD;
+    // temporary P and Q storage used in calculations
+    double *P = new double[m_curr_dim_size * m_curr_dim_size]();
+    double *Q = new double[m_curr_dim_size * m_curr_dim_size]();
 
-    // int rank, npes;
-    // MPI_Comm_rank(comm, &rank);
-    // MPI_Comm_size(comm, &npes);
+    buildPandQFilterMatrices(P, Q, m_padding_size, m_curr_dim_size,
+                             m_filter_type, false, false);
 
-    // if (rank == 0) {
-    //     printf("RF matrix:\n");
-    //     for (unsigned int k = 0; k < m_curr_dim_size; k++) {
-    //         for (unsigned int m = 0; m < m_curr_dim_size; m++) {
-    //             printf("%f ", m_RF[k * m_curr_dim_size + m]);
-    //         }
-    //         printf("\n");
-    //     }
-    // }
+#ifdef PRINT_COMPACT_MATRICES
+    std::cout << "\nP MATRIX" << std::endl;
+    print_square_mat(P, m_curr_dim_size);
+
+    std::cout << "\nQ MATRIX" << std::endl;
+    print_square_mat(Q, m_curr_dim_size);
+#endif
+
+    calculateDerivMatrix(m_R_filter, P, Q, m_curr_dim_size);
+
+#ifdef PRINT_COMPACT_MATRICES
+    std::cout << "\nFILTER MATRIX" << std::endl;
+    print_square_mat(m_R, m_curr_dim_size);
+#endif
+
+    // reset P and Q and then do the LEFT version
+    setArrToZero(P, m_curr_dim_size * m_curr_dim_size);
+    setArrToZero(Q, m_curr_dim_size * m_curr_dim_size);
+    buildPandQFilterMatrices(P, Q, m_padding_size, m_curr_dim_size,
+                             m_filter_type, true, false);
+
+#ifdef PRINT_COMPACT_MATRICES
+    std::cout << "\nLEFT P MATRIX" << std::endl;
+    print_square_mat(P, m_curr_dim_size);
+
+    std::cout << "\nLEFT Q MATRIX" << std::endl;
+    print_square_mat(Q, m_curr_dim_size);
+#endif
+
+    calculateDerivMatrix(m_R_left, P, Q, m_curr_dim_size);
+
+#ifdef PRINT_COMPACT_MATRICES
+    std::cout << "\nLEFT FILTER MATRIX" << std::endl;
+    print_square_mat(m_R_left, m_curr_dim_size);
+#endif
+
+    // reset P and Q and then do the RIGHT version
+    setArrToZero(P, m_curr_dim_size * m_curr_dim_size);
+    setArrToZero(Q, m_curr_dim_size * m_curr_dim_size);
+    buildPandQFilterMatrices(P, Q, m_padding_size, m_curr_dim_size,
+                             m_filter_type, false, true);
+
+#ifdef PRINT_COMPACT_MATRICES
+    std::cout << "\nRIGHT P MATRIX" << std::endl;
+    print_square_mat(P, m_curr_dim_size);
+
+    std::cout << "\nRIGHT Q MATRIX" << std::endl;
+    print_square_mat(Q, m_curr_dim_size);
+#endif
+
+    calculateDerivMatrix(m_R_right, P, Q, m_curr_dim_size);
+
+#ifdef PRINT_COMPACT_MATRICES
+    std::cout << "\nRIGHT FILTER MATRIX" << std::endl;
+    print_square_mat(m_R_right, m_curr_dim_size);
+#endif
+
+    // reset P and Q and then do the LEFTRIGHT version
+    setArrToZero(P, m_curr_dim_size * m_curr_dim_size);
+    setArrToZero(Q, m_curr_dim_size * m_curr_dim_size);
+    buildPandQFilterMatrices(P, Q, m_padding_size, m_curr_dim_size,
+                             m_filter_type, true, true);
+
+#ifdef PRINT_COMPACT_MATRICES
+    std::cout << "\nLEFTRIGHT P MATRIX" << std::endl;
+    print_square_mat(P, m_curr_dim_size);
+
+    std::cout << "\nLEFTRIGHT Q MATRIX" << std::endl;
+    print_square_mat(Q, m_curr_dim_size);
+#endif
+
+    calculateDerivMatrix(m_R_leftright, P, Q, m_curr_dim_size);
+
+#ifdef PRINT_COMPACT_MATRICES
+    std::cout << "\nLEFTRIGHT FILTER MATRIX" << std::endl;
+    print_square_mat(m_R_leftright, m_curr_dim_size);
+#endif
+
+    delete[] P;
+    delete[] Q;
 }
 
 void CompactFiniteDiff::delete_cfd_matrices() {
-    delete[] m_RF;
+    delete[] m_R_filter;
     delete[] m_R;
     delete[] m_u1d;
     delete[] m_du1d;
@@ -228,7 +289,11 @@ void CompactFiniteDiff::delete_cfd_matrices() {
 
     delete[] m_R_left;
     delete[] m_R_right;
-    delete[] m_r_leftright;
+    delete[] m_R_leftright;
+
+    delete[] m_R_filter_left;
+    delete[] m_R_filter_right;
+    delete[] m_R_filter_leftright;
 }
 
 void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
@@ -275,7 +340,7 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
                (bflag & (1u << OCT_DIR_RIGHT))) {
         R_mat_use = m_R_right;
     } else {
-        R_mat_use = m_r_leftright;
+        R_mat_use = m_R_leftright;
     }
 
     for (unsigned int k = 0; k < nz; k++) {
@@ -353,7 +418,7 @@ void CompactFiniteDiff::cfd_y(double *const Dyu, const double *const u,
                (bflag & (1u << OCT_DIR_UP))) {
         R_mat_use = m_R_right;
     } else {
-        R_mat_use = m_r_leftright;
+        R_mat_use = m_R_leftright;
     }
 
     for (unsigned int k = 0; k < nz; k++) {
@@ -424,7 +489,7 @@ void CompactFiniteDiff::cfd_z(double *const Dzu, const double *const u,
                (bflag & (1u << OCT_DIR_FRONT))) {
         R_mat_use = m_R_right;
     } else {
-        R_mat_use = m_r_leftright;
+        R_mat_use = m_R_leftright;
     }
 
     for (unsigned int j = 0; j < ny; j++) {
@@ -455,9 +520,10 @@ void CompactFiniteDiff::cfd_z(double *const Dzu, const double *const u,
     }
 }
 
-void CompactFiniteDiff::filter_cfd_x(double *const u, const double dx,
-                                     const unsigned int *sz, unsigned bflag) {
-    if (m_filter_type == 0) {
+void CompactFiniteDiff::filter_cfd_x(double *const u, double *const filtx_work,
+                                     const double dx, const unsigned int *sz,
+                                     unsigned bflag) {
+    if (m_filter_type == FILT_NONE) {
         return;
     }
 
@@ -465,29 +531,90 @@ void CompactFiniteDiff::filter_cfd_x(double *const u, const double dx,
     const unsigned int ny = sz[1];
     const unsigned int nz = sz[2];
 
-    for (unsigned int k = 0; k < nz; k++) {
-        for (unsigned int j = 0; j < ny; j++) {
-            for (unsigned int i = 0; i < nx; i++) {
-                m_u1d[i] = u[INDEX_3D(i, j, k)];
+    // copy u to filtx_work
+    std::copy_n(u, nx * ny * nz, filtx_work);
+
+    char TRANSA = 'N';
+
+    int M = nx;
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+    int N = ny;
+    char TRANSB = 'T';
+
+    // NOTE: LDA, LDB, and LDC should be nx, ny, and nz
+    // TODO: fix for non-square sizes
+    int LDA = nx;
+    int LDB = ny;
+    int LDC = nx;
+
+    double *u_curr_chunk = (double *)u;
+    double *filtu_curr_chunk = (double *)filtx_work;
+
+    double beta = 1.0;
+#else
+    char TRANSB = 'N';
+    int N = 1;  // NOTE: this must be 1 if we're doing the old way...
+    double beta = 0.0;
+#endif
+    int K = nx;
+    double alpha = 1.0;
+
+    double *RF_mat_use = nullptr;
+
+    // to reduce the number of checks, check for failing bflag first
+    if (!(bflag & (1u << OCT_DIR_LEFT)) && !(bflag & (1u << OCT_DIR_RIGHT))) {
+        RF_mat_use = m_R_filter;
+    } else if ((bflag & (1u << OCT_DIR_LEFT)) &&
+               !(bflag & (1u << OCT_DIR_RIGHT))) {
+        RF_mat_use = m_R_filter_left;
+    } else if (!(bflag & (1u << OCT_DIR_LEFT)) &&
+               (bflag & (1u << OCT_DIR_RIGHT))) {
+        RF_mat_use = m_R_filter_right;
+    } else {
+        RF_mat_use = m_R_filter_leftright;
+    }
+
+    for (unsigned int k = 0; k < nx; k++) {
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+        dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, RF_mat_use, &LDA,
+               u_curr_chunk, &LDB, &beta, filtu_curr_chunk, &LDC);
+
+        if (k == 0) {
+            print_square_mat(u_curr_chunk, nx);
+            print_square_mat(filtu_curr_chunk, nx);
+        }
+
+        u_curr_chunk += nx * ny;
+        filtu_curr_chunk += nx * ny;
+
+#else
+        for (int j = 0; j < ny; j++) {
+            for (int i = 0; i < nx; i++) {
+                m_du1d[i] = u[INDEX_3D(i, j, k)];
+                m_du2d[i] = m_du1d[i];
             }
 
-            for (unsigned int i = 0; i < nx; i++) {
-                m_du1d[i] = 0.0;
-                for (unsigned int m = 0; m < nx; m++) {
-                    m_du1d[i] += m_RF[i * nx + m] * m_u1d[m];
-                }
-            }
+            dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, RF_mat_use, &M, m_du1d,
+                   &K, &beta, m_du2d, &M);
 
-            for (unsigned int i = 0; i < nx; i++) {
-                u[INDEX_3D(i, j, k)] +=
-                    m_du1d[i];  // do we need to include a dx here?
+            for (int i = 0; i < nx; i++) {
+                u[INDEX_3D(i, j, k)] += m_du2d[i];
             }
         }
+#endif
     }
+
+    print_square_mat(&u[0], nx);
+
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+    // then copy it all over because of how dgemm works
+    std::copy_n(filtx_work, nx * ny * nz, u);
+#endif
 }
 
-void CompactFiniteDiff::filter_cfd_y(double *const u, const double dx,
-                                     const unsigned int *sz, unsigned bflag) {
+void CompactFiniteDiff::filter_cfd_y(double *const u, double *const filty_work,
+                                     const double dy, const unsigned int *sz,
+                                     unsigned bflag) {
     if (m_filter_type == 0) {
         return;
     }
@@ -495,7 +622,76 @@ void CompactFiniteDiff::filter_cfd_y(double *const u, const double dx,
     const unsigned int nx = sz[0];
     const unsigned int ny = sz[1];
     const unsigned int nz = sz[2];
+
+    // copy u to filtx_work
+    std::copy_n(u, nx * ny * nz, filty_work);
+
+    char TRANSA = 'N';
+    int M = ny;
+    int K = ny;
+    double alpha = 1.0 / dy;
+    double beta = 0.0;
+
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+    char TRANSB = 'N';
+    int N = nx;
+
+    double *u_curr_chunk = (double *)u;
+#else
+    char TRANSB = 'N';
+    int N = 1;
+#endif
+
+    double *RF_mat_use = nullptr;
+    // to reduce the number of checks, check for failing bflag first
+    if (!(bflag & (1u << OCT_DIR_DOWN)) && !(bflag & (1u << OCT_DIR_UP))) {
+        RF_mat_use = m_R_filter;
+    } else if ((bflag & (1u << OCT_DIR_DOWN)) &&
+               !(bflag & (1u << OCT_DIR_UP))) {
+        RF_mat_use = m_R_filter_left;
+    } else if (!(bflag & (1u << OCT_DIR_DOWN)) &&
+               (bflag & (1u << OCT_DIR_UP))) {
+        RF_mat_use = m_R_filter_right;
+    } else {
+        RF_mat_use = m_R_filter_leftright;
+    }
+
     for (unsigned int k = 0; k < nz; k++) {
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+
+        // thanks to memory layout, we can just... use this as a matrix
+        // so we can just grab the "matrix" of ny x nx for this one
+
+        dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, RF_mat_use, &M,
+               u_curr_chunk, &K, &beta, filty_work, &M);
+
+        // TODO: see if there's a faster way to copy (i.e. SSE?)
+        // the data is transposed so it's much harder to just copy all at once
+        for (unsigned int i = 0; i < nx; i++) {
+            for (unsigned int j = 0; j < ny; j++) {
+                u[INDEX_3D(i, j, k)] += filty_work[j + i * ny];
+            }
+        }
+
+        u_curr_chunk += nx * ny;
+#else
+        for (int i = 0; i < nx; i++) {
+            for (int j = 0; j < ny; j++) {
+                m_du1d[j] = u[INDEX_3D(i, j, k)];
+                m_du2d[j] = m_du1d[j];
+            }
+
+            dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, RF_mat_use, &M, m_du1d,
+                   &K, &beta, m_du2d, &M);
+
+            for (int j = 0; j < ny; j++) {
+                u[INDEX_3D(i, j, k)] += m_du2d[j];
+            }
+        }
+
+#endif
+
+#if 0
         for (unsigned int i = 0; i < nx; i++) {
             for (unsigned int j = 0; j < ny; j++) {
                 m_u1d[j] = u[INDEX_3D(i, j, k)];
@@ -503,19 +699,21 @@ void CompactFiniteDiff::filter_cfd_y(double *const u, const double dx,
             for (unsigned int j = 0; j < ny; j++) {
                 m_du1d[j] = 0.0;
                 for (unsigned int m = 0; m < ny; m++) {
-                    m_du1d[j] += m_RF[j * ny + m] * m_u1d[m];
+                    m_du1d[j] += m_R_filter[j * ny + m] * m_u1d[m];
                 }
             }
             for (unsigned int j = 0; j < ny; j++) {
-                u[INDEX_3D(i, j, k)] +=
+                u[INDEX_3D(i, j, k)] =
                     m_du1d[j];  // do we need to include a dy here?
             }
         }
+#endif
     }
 }
 
-void CompactFiniteDiff::filter_cfd_z(double *const u, const double dz,
-                                     const unsigned int *sz, unsigned bflag) {
+void CompactFiniteDiff::filter_cfd_z(double *const u, double *const filtz_work,
+                                     const double dz, const unsigned int *sz,
+                                     unsigned bflag) {
     if (m_filter_type == 0) {
         return;
     }
@@ -524,21 +722,68 @@ void CompactFiniteDiff::filter_cfd_z(double *const u, const double dz,
     const unsigned int ny = sz[1];
     const unsigned int nz = sz[2];
 
+    char TRANSA = 'N';
+    char TRANSB = 'N';
+    int M = nz;
+    int N = 1;
+    int K = nz;
+    double alpha = 1.0 / dz;
+    double beta = 0.0;
+
+    double *RF_mat_use = nullptr;
+    // to reduce the number of checks, check for failing bflag first
+    if (!(bflag & (1u << OCT_DIR_BACK)) && !(bflag & (1u << OCT_DIR_FRONT))) {
+        RF_mat_use = m_R;
+    } else if ((bflag & (1u << OCT_DIR_BACK)) &&
+               !(bflag & (1u << OCT_DIR_FRONT))) {
+        RF_mat_use = m_R_left;
+    } else if (!(bflag & (1u << OCT_DIR_BACK)) &&
+               (bflag & (1u << OCT_DIR_FRONT))) {
+        RF_mat_use = m_R_right;
+    } else {
+        RF_mat_use = m_R_leftright;
+    }
+
     for (unsigned int j = 0; j < ny; j++) {
         for (unsigned int i = 0; i < nx; i++) {
+            for (unsigned int k = 0; k < nz; k++) {
+                m_u1d[k] = u[INDEX_3D(i, j, k)];
+            }
+
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+            dgemv_(&TRANSA, &M, &K, &alpha, RF_mat_use, &M, m_u1d, &N, &beta,
+                   filtz_work, &N);
+
+            for (unsigned int k = 0; k < nz; k++) {
+                u[INDEX_3D(i, j, k)] += filtz_work[k];
+            }
+
+#else
+
+            dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, RF_mat_use, &M, m_u1d,
+                   &K, &beta, m_du1d, &M);
+
+            for (int k = 0; k < nz; k++) {
+                u[INDEX_3D(i, j, k)] += m_du1d[k];
+            }
+
+#endif
+
+#if 0
             for (unsigned int k = 0; k < nz; k++) {
                 m_u1d[k] = u[INDEX_3D(i, j, k)];
             }
             for (unsigned int k = 0; k < nz; k++) {
                 m_du1d[k] = 0.0;
                 for (unsigned int m = 0; m < nz; m++) {
-                    m_du1d[k] += m_RF[k * nz + m] * m_u1d[m];
+                    m_du1d[k] += m_R_filter[k * nz + m] * m_u1d[m];
                 }
             }
             for (unsigned int k = 0; k < nz; k++) {
                 u[INDEX_3D(i, j, k)] +=
                     m_du1d[k];  // do we need to include a dz here?
             }
+#endif
         }
     }
 }
@@ -761,6 +1006,127 @@ void buildPandQMatrices(double *P, double *Q, const uint32_t padding,
         throw std::invalid_argument(
             "The CFD deriv type was not one of the valid options. derivtype=" +
             std::to_string(derivtype));
+    }
+
+    // copy the values back in
+    // NOTE: the use of j and i assumes ROW-MAJOR order, but it will just copy a
+    // square matrix in no matter what, so it's not a big issue
+    if (is_left_edge or is_right_edge) {
+        // then memcopy the "chunks" to where they go inside the matrix
+        uint32_t temp_arr_i = 0;
+        // iterate over the rows
+        for (uint32_t jj = j_start; jj < j_end; jj++) {
+            // ii will only go from empty rows we actually need to fill...
+            // j will start at "j_start" and go until "j_end" where we need to
+            // fill memory start index of our main array
+
+            uint32_t temp_start = INDEX_N2D(0, temp_arr_i, curr_n);
+            // uint32_t temp_end = INDEX_N2D(curr_n - 1, temp_arr_i, curr_n);
+
+            std::copy_n(&tempP[temp_start], curr_n, &P[INDEX_2D(i_start, jj)]);
+            std::copy_n(&tempQ[temp_start], curr_n, &Q[INDEX_2D(i_start, jj)]);
+
+            // increment temp_arr "row" value
+            temp_arr_i++;
+        }
+        // clear up our temporary arrays we don't need
+        delete[] tempP;
+        delete[] tempQ;
+    }
+    // NOTE: tempP doesn't need to be deleted if it was not initialized,
+    // so we don't need to delete it unless we're dealing with left/right edges
+}
+
+void buildPandQFilterMatrices(double *P, double *Q, const uint32_t padding,
+                              const uint32_t n, const FilterType filtertype,
+                              const bool is_left_edge,
+                              const bool is_right_edge) {
+    // NOTE: we're pretending that all of the "mpi" or "block" boundaries
+    // are treated equally. We only need to account for physical "left" and
+    // "right" edges
+
+    // NOTE: (2) we're also assuming that P and Q are initialized to **zero**.
+    // There are no guarantees in this function if they are not.
+    std::cout << filtertype << " is the filter type" << std::endl;
+
+    uint32_t curr_n = n;
+    uint32_t i_start = 0;
+    uint32_t i_end = n;
+    uint32_t j_start = 0;
+    uint32_t j_end = n;
+
+    if (is_left_edge) {
+        // initialize the "diagonal" in the padding to 1
+        for (uint32_t ii = 0; ii < padding; ii++) {
+            P[INDEX_2D(ii, ii)] = 1.0;
+            Q[INDEX_2D(ii, ii)] = 1.0;
+        }
+        i_start += padding;
+        j_start += padding;
+        curr_n -= padding;
+    }
+
+    if (is_right_edge) {
+        // initialize bottom "diagonal" in padding to 1 as well
+        for (uint32_t ii = n - 1; ii >= n - padding; ii--) {
+            P[INDEX_2D(ii, ii)] = 1.0;
+            Q[INDEX_2D(ii, ii)] = 1.0;
+        }
+        i_end -= padding;
+        j_end -= padding;
+        curr_n -= padding;
+    }
+
+    std::cout << "i : " << i_start << " " << i_end << std::endl;
+    std::cout << "j : " << j_start << " " << j_end << std::endl;
+
+    // NOTE: when at the "edges", we need a temporary array that can be copied
+    // over
+    double *tempP = nullptr;
+    double *tempQ = nullptr;
+
+    if (is_left_edge or is_right_edge) {
+        // initialize tempP to be a "smaller" square matrix for use
+        tempP = new double[curr_n * curr_n]();
+        tempQ = new double[curr_n * curr_n]();
+    } else {
+        // just use the same pointer value, then no need to adjust later even
+        tempP = P;
+        tempQ = Q;
+    }
+
+    if (filtertype == FILT_KIM_6) {
+        // build Kim4 P and Q
+
+        initializeKim6FilterPQ(tempP, tempQ, curr_n);
+    } else if (filtertype == FILT_JT_6) {
+        // TODO: NOT CURRENTLY IMPLEMENTED
+        std::cerr << "WARNING: The JT 6 filter is not yet ready! This will "
+                     "lead to unexpected results!"
+                  << std::endl;
+    } else if (filtertype == FILT_JT_8) {
+        // TODO: NOT CURRENTLY IMPLEMENTED
+        std::cerr << "WARNING: The JT 8 filter is not yet ready! This will "
+                     "lead to unexpected results!"
+                  << std::endl;
+    } else if (filtertype == FILT_NONE) {
+        // just.... do nothing... keep them at zeros
+        if (is_left_edge or is_right_edge) {
+            delete[] tempP;
+            delete[] tempQ;
+        }
+        throw std::invalid_argument(
+            "dendro_cfd::buildPandQFilterMatrices should never be called with "
+            "a "
+            "CFD_NONE deriv type!");
+    } else {
+        if (is_left_edge or is_right_edge) {
+            delete[] tempP;
+            delete[] tempQ;
+        }
+        throw std::invalid_argument(
+            "The filter type was not one of the valid options. filtertype=" +
+            std::to_string(filtertype));
     }
 
     // copy the values back in
