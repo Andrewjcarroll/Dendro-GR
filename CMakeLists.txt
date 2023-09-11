@@ -14,7 +14,7 @@ project(Dendro-5.0 C CXX Fortran)
 
 # the standard we're using is c++11 -- NOTE: this might change to C++17 or newer
 # in the future
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 
 
 # set up fsanatize flags to check for memory leaks, need to set them for C++, X, and linker but only on debug
@@ -126,6 +126,7 @@ add_definitions(-DOCT2BLK_COARSEST_LEV=${OCT2BLK_COARSEST_LEV})
 
 if(WITH_BLAS_LAPACK)
   add_definitions(-DWITH_BLAS_LAPACK)
+  set(BLA_STATIC OFF) # NOTE: just ensuring that blas is set to dynamically link
   find_package(BLAS REQUIRED)
   find_package(LAPACK REQUIRED)
   set(LAPACK_LINKER_FLAGS -llapacke -llapack -lblas -lgfortran -lquadmath)
@@ -225,6 +226,9 @@ add_definitions(-DMATVEC_PROFILE)
 
 # dendro folder *MUST* be included to build the library first
 add_subdirectory(dendrolib)
+
+# libxsmm
+add_subdirectory(libs)
 
 # additional subdirectories that are their own "solvers"
 add_subdirectory(BSSN_GR)

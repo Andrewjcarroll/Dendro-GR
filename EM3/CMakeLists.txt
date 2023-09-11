@@ -82,7 +82,7 @@ if(WITH_CUDA)
     target_include_directories(em3Solver PRIVATE ${CUDA_INCLUDE_DIRS})
 endif()
 target_link_libraries(em3Solver dendro5 ${LAPACK_LIBRARIES} ${MPI_LIBRARIES} m)
-
+# target_link_libraries(em3Solver xsmm)
 
 set(DERIV_TEST_SRC src/compact_derivs.cpp
         src/derivs.cpp
@@ -98,12 +98,23 @@ set(DERIV_TEST_INC include/rhs.h
         include/HAMR.h
         include/kim_filter.h)
 
+message(${BLAS_LIBRARIES})
+# message(${BLAS_LINKER_FLAGS})
+# message(${TARGET_FILE:xsmm})
+
+add_definitions(-DBLAS=0)
+
+
 set(SOURCE_FILES src/test_cfd_profiling.cpp ${DERIV_TEST_INC} ${DERIV_TEST_SRC})
+
 add_executable(derivTesting ${SOURCE_FILES})
 target_include_directories(derivTesting PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_include_directories(derivTesting PRIVATE ${CMAKE_SOURCE_DIR}/dendrolib/include)
 target_include_directories(derivTesting PRIVATE ${GSL_INCLUDE_DIRS})
+target_link_libraries(derivTesting xsmm) # "-Wl,--wrap=dgemm_,--wrap=sgemm_ ${BLAS_LIBRARIES} $<TARGET_FILE:xsmm>")
+
 target_link_libraries(derivTesting dendro5 ${LAPACK_LIBRARIES} ${MPI_LIBRARIES} m)
+# message("-Wl,--wrap=dgemm_,--wrap=sgemm_" ${BLAS_INCLUDE_DIR} $<TARGET_FILE:xsmm>)
 
 
 # set(SOURCE_FILES src/em3_lts.cpp  include/em3.h ${EM3_INC} ${EM3_SRC})
