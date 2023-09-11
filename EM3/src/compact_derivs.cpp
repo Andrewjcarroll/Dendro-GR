@@ -306,12 +306,17 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
     // std::cout << "Nx, ny, nz: " << nx << " " << ny << " " << nz << std::endl;
 
     char TRANSA = 'N';
-
-    int M = nx;
-#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
-    int N = ny;
     char TRANSB = 'N';
 
+    int M = nx;
+    int N = ny;
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+    const double alpha = 1.0 / dx;
+#else
+    double alpha = 1.0 / dx;
+#endif
+    int K = nx;
+    
     // NOTE: LDA, LDB, and LDC should be nx, ny, and nz
     // TODO: fix for non-square sizes
     int LDA = nx;
@@ -320,12 +325,7 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
 
     double *u_curr_chunk = (double *)u;
     double *du_curr_chunk = (double *)Dxu;
-#else
-    char TRANSB = 'N';
-    int N = 1;  // NOTE: this must be 1 if we're doing the old way...
-#endif
-    int K = nx;
-    const double alpha = 1.0 / dx;
+
     double beta = 0.0;
 
     double *R_mat_use = nullptr;
@@ -343,16 +343,21 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
         R_mat_use = m_R_leftright;
     }
 
-    // std::cout << "M, N, K " << M << " " << N << " " << K  << " and alpha is " << alpha << std::endl;
+    // std::cout << "M, N, K " << M << " " << N << " " << K  << " and alpha is "
+    // << alpha << std::endl;
 
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
     typedef libxsmm_mmfunction<double> kernel_type;
-    // kernel_type kernel(LIBXSMM_GEMM_FLAGS(TRANSA, TRANSB), M, N, K, alpha, beta);
+    // kernel_type kernel(LIBXSMM_GEMM_FLAGS(TRANSA, TRANSB), M, N, K, alpha,
+    // beta);
     // TODO: figure out why an alpha of not 1 is breaking the kernel
     kernel_type kernel(LIBXSMM_GEMM_FLAG_NONE, M, N, K, 1.0, 0.0);
     assert(kernel);
+#endif
 
-    // const libxsmm_mmfunction<double, double, LIBXSMM_PREFETCH_AUTO> xmm(LIBXSMM_GEMM_FLAGS(TRANSA, TRANSB), M, N, K, LDA, LDB, LDC, alpha, beta);
-    // std::cout << "HEY" << std::endl;
+    // const libxsmm_mmfunction<double, double, LIBXSMM_PREFETCH_AUTO>
+    // xmm(LIBXSMM_GEMM_FLAGS(TRANSA, TRANSB), M, N, K, LDA, LDB, LDC, alpha,
+    // beta); std::cout << "HEY" << std::endl;
 
     for (unsigned int k = 0; k < nz; k++) {
 #ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
@@ -360,59 +365,29 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
         // thanks to memory layout, we can just... use this as a matrix
         // so we can just grab the "matrix" of ny x nx for this one
 
-        // dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &LDA,
-        //        u_curr_chunk, &LDB, &beta, du_curr_chunk, &LDC);
-
         // performs C_mn = alpha * A_mk * B_kn + beta * C_mn
 
         // for the x_der case, m = k = nx
 
-        // but n = ny
-        // libxsmm_dgemm(&TRANSA, &TRANSB, &M /*required*/, &N /*required*/,
-        //               &K /*required*/, &alpha /*alpha*/,
-        //               R_mat_use
-        //               /*required*/,
-        //               &LDA /*lda*/, u_curr_chunk /*required*/, &LDB /*ldb*/,
-        //               &beta /*beta*/,
-        //               du_curr_chunk
-        //               /*required*/,
-        //               &LDC /*ldc*/);
-
-
         kernel(R_mat_use, u_curr_chunk, du_curr_chunk);
+
+#else
+
+        dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &LDA,
+               u_curr_chunk, &LDB, &beta, du_curr_chunk, &LDC);
+
+#endif
 
         u_curr_chunk += nx * ny;
         du_curr_chunk += nx * ny;
-
-
-#else
-        for (unsigned int j = 0; j < ny; j++) {
-            // for (unsigned int i = 0; i < nx; i++) {
-            //     m_u1d[i] = u[INDEX_3D(i, j, k)];
-            // }
-
-            // TODO: call just a pointer
-            // optimization for X, since memory is laid out
-            // z -> y -> x (as indicated by IDX/INDEX_3D)
-            // we can just calculate the pointer address to use
-            double *u_ptr = (double *)u + nx * (j + ny * k);
-            // NOTE: dgemm_ requires a non-const pointer, the const specifically
-            // so we don't accidentally modify u. It us not 100% clear if dgemm_
-            // modifies it or not
-
-            dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &M, u_ptr,
-                   &K, &beta, m_du1d, &M);
-
-            for (unsigned int i = 0; i < nx; i++) {
-                Dxu[INDEX_3D(i, j, k)] = m_du1d[i];
-            }
-        }
-#endif
     }
 
+    // TODO: investigate why the kernel won't take 1/dx as its alpha
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
     for (uint32_t ii = 0; ii < nx * ny * nz; ii++) {
-        Dxu[ii] *= 1/dx;
+        Dxu[ii] *= 1 / dx;
     }
+#endif
 }
 
 void CompactFiniteDiff::cfd_y(double *const Dyu, const double *const u,
@@ -610,11 +585,6 @@ void CompactFiniteDiff::filter_cfd_x(double *const u, double *const filtx_work,
         dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, RF_mat_use, &LDA,
                u_curr_chunk, &LDB, &beta, filtu_curr_chunk, &LDC);
 
-        if (k == 0) {
-            print_square_mat(u_curr_chunk, nx);
-            print_square_mat(filtu_curr_chunk, nx);
-        }
-
         u_curr_chunk += nx * ny;
         filtu_curr_chunk += nx * ny;
 
@@ -634,8 +604,6 @@ void CompactFiniteDiff::filter_cfd_x(double *const u, double *const filtx_work,
         }
 #endif
     }
-
-    print_square_mat(&u[0], nx);
 
 #ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
     // then copy it all over because of how dgemm works
@@ -872,7 +840,7 @@ void buildPandQMatrices(double *P, double *Q, const uint32_t padding,
 
     // NOTE: (2) we're also assuming that P and Q are initialized to **zero**.
     // There are no guarantees in this function if they are not.
-    std::cout << derivtype << " is the deriv type" << std::endl;
+    // std::cout << derivtype << " is the deriv type" << std::endl;
 
     uint32_t curr_n = n;
     uint32_t i_start = 0;
@@ -902,8 +870,8 @@ void buildPandQMatrices(double *P, double *Q, const uint32_t padding,
         curr_n -= padding;
     }
 
-    std::cout << "i : " << i_start << " " << i_end << std::endl;
-    std::cout << "j : " << j_start << " " << j_end << std::endl;
+    // std::cout << "i : " << i_start << " " << i_end << std::endl;
+    // std::cout << "j : " << j_start << " " << j_end << std::endl;
 
     // NOTE: when at the "edges", we need a temporary array that can be copied
     // over
@@ -951,8 +919,6 @@ void buildPandQMatrices(double *P, double *Q, const uint32_t padding,
             rightEdgeDtype = getDerTypeForEdges(
                 derivtype, BoundaryType::BLOCK_CFD_DIRICHLET);
         }
-
-        std::cout << "Left edge is " << leftEdgeDtype << std::endl;
 
         buildMatrixLeft(tempP, tempQ, &ibgn, leftEdgeDtype, padding, curr_n);
         buildMatrixRight(tempP, tempQ, &iend, rightEdgeDtype, padding, curr_n);
@@ -1078,7 +1044,7 @@ void buildPandQFilterMatrices(double *P, double *Q, const uint32_t padding,
 
     // NOTE: (2) we're also assuming that P and Q are initialized to **zero**.
     // There are no guarantees in this function if they are not.
-    std::cout << filtertype << " is the filter type" << std::endl;
+    // std::cout << filtertype << " is the filter type" << std::endl;
 
     uint32_t curr_n = n;
     uint32_t i_start = 0;
@@ -1108,8 +1074,8 @@ void buildPandQFilterMatrices(double *P, double *Q, const uint32_t padding,
         curr_n -= padding;
     }
 
-    std::cout << "i : " << i_start << " " << i_end << std::endl;
-    std::cout << "j : " << j_start << " " << j_end << std::endl;
+    // std::cout << "i : " << i_start << " " << i_end << std::endl;
+    // std::cout << "j : " << j_start << " " << j_end << std::endl;
 
     // NOTE: when at the "edges", we need a temporary array that can be copied
     // over
@@ -1263,8 +1229,6 @@ void setArrToZero(double *arr, const int n) {
 void buildMatrixLeft(double *P, double *Q, int *xib, const DerType dtype,
                      const int nghosts, const int n) {
     int ib = 0;
-
-    std::cout << dtype << std::endl;
 
     switch (dtype) {
         case CFD_DRCHLT_ORDER_4: {
