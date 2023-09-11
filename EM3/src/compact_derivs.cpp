@@ -1,5 +1,7 @@
 #include "compact_derivs.h"
 
+#include <libxsmm.h>
+
 #define FASTER_DERIV_CALC_VIA_MATRIX_MULT
 
 namespace dendro_cfd {
@@ -325,7 +327,7 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
     int N = 1;  // NOTE: this must be 1 if we're doing the old way...
 #endif
     int K = nx;
-    double alpha = 1.0 / dx;
+    const double alpha = 1.0 / dx;
     double beta = 0.0;
 
     double *R_mat_use = nullptr;
@@ -343,14 +345,45 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
         R_mat_use = m_R_leftright;
     }
 
+    // std::cout << "M, N, K " << M << " " << N << " " << K  << " and alpha is " << alpha << std::endl;
+
+    typedef libxsmm_mmfunction<double> kernel_type;
+    // kernel_type kernel(LIBXSMM_GEMM_FLAGS(TRANSA, TRANSB), M, N, K, alpha, beta);
+    kernel_type kernel(LIBXSMM_GEMM_FLAG_TRANS_B, M, N, K, 1.0, 0.0);
+    assert(kernel);
+
+    // const libxsmm_mmfunction<double, double, LIBXSMM_PREFETCH_AUTO> xmm(LIBXSMM_GEMM_FLAGS(TRANSA, TRANSB), M, N, K, LDA, LDB, LDC, alpha, beta);
+    // std::cout << "HEY" << std::endl;
+
     for (unsigned int k = 0; k < nz; k++) {
 #ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
         // N = ny;
         // thanks to memory layout, we can just... use this as a matrix
         // so we can just grab the "matrix" of ny x nx for this one
 
-        dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &LDA,
-               u_curr_chunk, &LDB, &beta, du_curr_chunk, &LDC);
+        // dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &LDA,
+        //        u_curr_chunk, &LDB, &beta, du_curr_chunk, &LDC);
+
+        // performs C_mn = alpha * A_mk * B_kn + beta * C_mn
+
+        // for the x_der case, m = k = nx
+
+        // but n = ny
+        // libxsmm_dgemm(&TRANSA, &TRANSB, &M /*required*/, &N /*required*/,
+        //               &K /*required*/, &alpha /*alpha*/,
+        //               R_mat_use
+        //               /*required*/,
+        //               &LDA /*lda*/, u_curr_chunk /*required*/, &LDB /*ldb*/,
+        //               &beta /*beta*/,
+        //               du_curr_chunk
+        //               /*required*/,
+        //               &LDC /*ldc*/);
+
+
+        kernel(R_mat_use, u_curr_chunk, du_curr_chunk);
+
+        // std::cout << "\nk = " << k << std::endl;
+        // print_square_mat(du_curr_chunk, nx);
 
         u_curr_chunk += nx * ny;
         du_curr_chunk += nx * ny;
@@ -381,6 +414,10 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
             }
         }
 #endif
+    }
+
+    for (uint32_t ii = 0; ii < nx * ny * nz; ii++) {
+        Dxu[ii] *= 1/dx;
     }
 }
 
