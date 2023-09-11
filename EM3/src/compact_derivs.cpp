@@ -1,7 +1,5 @@
 #include "compact_derivs.h"
 
-#include <libxsmm.h>
-
 #define FASTER_DERIV_CALC_VIA_MATRIX_MULT
 
 namespace dendro_cfd {
@@ -312,7 +310,7 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
     int M = nx;
 #ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
     int N = ny;
-    char TRANSB = 'T';
+    char TRANSB = 'N';
 
     // NOTE: LDA, LDB, and LDC should be nx, ny, and nz
     // TODO: fix for non-square sizes
@@ -349,7 +347,8 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
 
     typedef libxsmm_mmfunction<double> kernel_type;
     // kernel_type kernel(LIBXSMM_GEMM_FLAGS(TRANSA, TRANSB), M, N, K, alpha, beta);
-    kernel_type kernel(LIBXSMM_GEMM_FLAG_TRANS_B, M, N, K, 1.0, 0.0);
+    // TODO: figure out why an alpha of not 1 is breaking the kernel
+    kernel_type kernel(LIBXSMM_GEMM_FLAG_NONE, M, N, K, 1.0, 0.0);
     assert(kernel);
 
     // const libxsmm_mmfunction<double, double, LIBXSMM_PREFETCH_AUTO> xmm(LIBXSMM_GEMM_FLAGS(TRANSA, TRANSB), M, N, K, LDA, LDB, LDC, alpha, beta);
@@ -382,14 +381,9 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
 
         kernel(R_mat_use, u_curr_chunk, du_curr_chunk);
 
-        // std::cout << "\nk = " << k << std::endl;
-        // print_square_mat(du_curr_chunk, nx);
-
         u_curr_chunk += nx * ny;
         du_curr_chunk += nx * ny;
 
-        // then just move stuff right back over if using the other derivative
-        // space! std::copy(m_du2d, m_du2d + (nx * ny), dx_ptr);
 
 #else
         for (unsigned int j = 0; j < ny; j++) {
@@ -435,7 +429,7 @@ void CompactFiniteDiff::cfd_y(double *const Dyu, const double *const u,
     double beta = 0.0;
 
 #ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
-    char TRANSB = 'N';
+    char TRANSB = 'T';
     int N = nx;
 
     double *u_curr_chunk = (double *)u;

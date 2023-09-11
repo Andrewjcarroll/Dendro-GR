@@ -1,5 +1,7 @@
 #pragma once
 
+#include <libxsmm.h>
+
 #include <algorithm>
 #include <cmath>
 #include <map>
