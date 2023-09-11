@@ -316,7 +316,7 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
     double alpha = 1.0 / dx;
 #endif
     int K = nx;
-    
+
     // NOTE: LDA, LDB, and LDC should be nx, ny, and nz
     // TODO: fix for non-square sizes
     int LDA = nx;
@@ -398,20 +398,16 @@ void CompactFiniteDiff::cfd_y(double *const Dyu, const double *const u,
     const unsigned int nz = sz[2];
 
     char TRANSA = 'N';
+    char TRANSB = 'T';
     int M = ny;
+    int N = nx;
     int K = ny;
+
     double alpha = 1.0 / dy;
     double beta = 0.0;
 
-#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
-    char TRANSB = 'T';
-    int N = nx;
-
     double *u_curr_chunk = (double *)u;
-#else
-    char TRANSB = 'N';
-    int N = 1;
-#endif
+    double *du_curr_chunk = (double *)Dyu;
 
     double *R_mat_use = nullptr;
     // to reduce the number of checks, check for failing bflag first
@@ -427,14 +423,28 @@ void CompactFiniteDiff::cfd_y(double *const Dyu, const double *const u,
         R_mat_use = m_R_leftright;
     }
 
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+    typedef libxsmm_mmfunction<double> kernel_type;
+    // kernel_type kernel(LIBXSMM_GEMM_FLAGS(TRANSA, TRANSB), M, N, K, alpha,
+    // beta);
+    // TODO: figure out why an alpha of not 1 is breaking the kernel
+    kernel_type kernel(LIBXSMM_GEMM_FLAG_TRANS_B, M, N, K, 1.0, 0.0);
+    assert(kernel);
+#endif
+
     for (unsigned int k = 0; k < nz; k++) {
 #ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
         // thanks to memory layout, we can just... use this as a matrix
         // so we can just grab the "matrix" of ny x nx for this one
 
+        kernel(R_mat_use, u_curr_chunk, m_du2d);
+
+#else
+
         dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &M,
                u_curr_chunk, &K, &beta, m_du2d, &M);
 
+#endif
         // TODO: see if there's a faster way to copy (i.e. SSE?)
         // the data is transposed so it's much harder to just copy all at once
         for (unsigned int i = 0; i < nx; i++) {
@@ -443,30 +453,22 @@ void CompactFiniteDiff::cfd_y(double *const Dyu, const double *const u,
             }
         }
 
+        // NOTE: this is probably faster on Intel, but for now we'll do the form
+        // above libxsmm_otrans(du_curr_chunk, m_du2d, sizeof(double), ny, nx,
+        // nx, ny);
+        // TODO: mkl's mkl_domatcopy might be even better!
+
+        // update u_curr_chunk
         u_curr_chunk += nx * ny;
-#else
-        for (unsigned int i = 0; i < nx; i++) {
-            for (unsigned int j = 0; j < ny; j++) {
-                m_u1d[j] = u[INDEX_3D(i, j, k)];
-            }
-
-            // for (unsigned int j = 0; j < ny; j++) {
-            //     m_du1d[j] = 0.0;
-            //     for (unsigned int m = 0; m < ny; m++) {
-            //         m_du1d[j] += m_R[j * ny + m] * m_u1d[m];
-            //         // m_du1d[j] += m_R[j * ny + m] * u[INDEX_3D(i, m, k)];
-            //     }
-            // }
-
-            dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &M, m_u1d,
-                   &K, &beta, m_du1d, &M);
-
-            for (unsigned int j = 0; j < ny; j++) {
-                Dyu[INDEX_3D(i, j, k)] = m_du1d[j];
-            }
-        }
-#endif
+        du_curr_chunk += nx * ny;
     }
+
+    // NOTE: it is currently faster for these derivatives if we calculate them
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+    for (uint32_t ii = 0; ii < nx * ny * nz; ii++) {
+        Dyu[ii] *= 1 / dy;
+    }
+#endif
 }
 
 void CompactFiniteDiff::cfd_z(double *const Dzu, const double *const u,
