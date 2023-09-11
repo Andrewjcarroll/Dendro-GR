@@ -82,7 +82,7 @@ if(WITH_CUDA)
     target_include_directories(em3Solver PRIVATE ${CUDA_INCLUDE_DIRS})
 endif()
 target_link_libraries(em3Solver dendro5 ${LAPACK_LIBRARIES} ${MPI_LIBRARIES} m)
-# target_link_libraries(em3Solver xsmm)
+target_link_libraries(em3Solver xsmm)
 
 set(DERIV_TEST_SRC src/compact_derivs.cpp
         src/derivs.cpp
