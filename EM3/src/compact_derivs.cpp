@@ -1,6 +1,6 @@
 #include "compact_derivs.h"
 
-#define FASTER_DERIV_CALC_VIA_MATRIX_MULT
+// #define FASTER_DERIV_CALC_VIA_MATRIX_MULT
 
 namespace dendro_cfd {
 
@@ -343,9 +343,6 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
         R_mat_use = m_R_leftright;
     }
 
-    // std::cout << "M, N, K " << M << " " << N << " " << K  << " and alpha is "
-    // << alpha << std::endl;
-
 #ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
     typedef libxsmm_mmfunction<double> kernel_type;
     // kernel_type kernel(LIBXSMM_GEMM_FLAGS(TRANSA, TRANSB), M, N, K, alpha,
@@ -357,7 +354,7 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
 
     // const libxsmm_mmfunction<double, double, LIBXSMM_PREFETCH_AUTO>
     // xmm(LIBXSMM_GEMM_FLAGS(TRANSA, TRANSB), M, N, K, LDA, LDB, LDC, alpha,
-    // beta); std::cout << "HEY" << std::endl;
+    // beta);
 
     for (unsigned int k = 0; k < nz; k++) {
 #ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
@@ -543,11 +540,11 @@ void CompactFiniteDiff::filter_cfd_x(double *const u, double *const filtx_work,
     std::copy_n(u, nx * ny * nz, filtx_work);
 
     char TRANSA = 'N';
+    char TRANSB = 'N';
 
     int M = nx;
-#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
     int N = ny;
-    char TRANSB = 'N';
+    int K = nx;
 
     // NOTE: LDA, LDB, and LDC should be nx, ny, and nz
     // TODO: fix for non-square sizes
@@ -558,14 +555,9 @@ void CompactFiniteDiff::filter_cfd_x(double *const u, double *const filtx_work,
     double *u_curr_chunk = (double *)u;
     double *filtu_curr_chunk = (double *)filtx_work;
 
-    double beta = 1.0;
-#else
-    char TRANSB = 'N';
-    int N = 1;  // NOTE: this must be 1 if we're doing the old way...
-    double beta = 0.0;
-#endif
-    int K = nx;
     double alpha = 1.0;
+    // TODO: beta should actuall be a parameter!
+    double beta = 1.0;
 
     double *RF_mat_use = nullptr;
 
@@ -582,33 +574,36 @@ void CompactFiniteDiff::filter_cfd_x(double *const u, double *const filtx_work,
         RF_mat_use = m_R_filter_leftright;
     }
 
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+    typedef libxsmm_mmfunction<double> kernel_type;
+    // kernel_type kernel(LIBXSMM_GEMM_FLAGS(TRANSA, TRANSB), M, N, K, alpha,
+    // beta);
+    // TODO: figure out why an alpha of not 1 is breaking the kernel
+    kernel_type kernel(LIBXSMM_GEMM_FLAG_NONE, M, N, K, 1.0, 1.0);
+    assert(kernel);
+#endif
+
     for (unsigned int k = 0; k < nx; k++) {
 #ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+        // thanks to memory layout, we can just... use this as a matrix
+        // so we can just grab the "matrix" of ny x nx for this one
+
+        // performs C_mn = alpha * A_mk * B_kn + beta * C_mn
+
+        // for the x_der case, m = k = nx
+        kernel(RF_mat_use, u_curr_chunk, filtu_curr_chunk);
+
+#else
         dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, RF_mat_use, &LDA,
                u_curr_chunk, &LDB, &beta, filtu_curr_chunk, &LDC);
 
+#endif
         u_curr_chunk += nx * ny;
         filtu_curr_chunk += nx * ny;
-
-#else
-        for (int j = 0; j < ny; j++) {
-            for (int i = 0; i < nx; i++) {
-                m_du1d[i] = u[INDEX_3D(i, j, k)];
-                m_du2d[i] = m_du1d[i];
-            }
-
-            dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, RF_mat_use, &M, m_du1d,
-                   &K, &beta, m_du2d, &M);
-
-            for (int i = 0; i < nx; i++) {
-                u[INDEX_3D(i, j, k)] += m_du2d[i];
-            }
-        }
-#endif
     }
 
-#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
-    // then copy it all over because of how dgemm works
+#ifndef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+    // we don't want B to overwrite C other wise we end up with errors
     std::copy_n(filtx_work, nx * ny * nz, u);
 #endif
 }
