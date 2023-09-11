@@ -321,7 +321,7 @@ namespace em3
 
     extern dendro_cfd::DerType EM3_DERIV_TYPE;
      /**@brief: Used to choose which compact finite difference deriv Filter to use*/
-    extern unsigned int EM3_FILTER_TYPE;
+    extern dendro_cfd::FilterType EM3_FILTER_TYPE;
 
 
     extern double* EM3_DERIV_WORKSPACE;
