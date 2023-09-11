@@ -570,7 +570,7 @@ void CompactFiniteDiff::filter_cfd_x(double *const u, double *const filtx_work,
     int M = nx;
 #ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
     int N = ny;
-    char TRANSB = 'T';
+    char TRANSB = 'N';
 
     // NOTE: LDA, LDB, and LDC should be nx, ny, and nz
     // TODO: fix for non-square sizes
@@ -664,7 +664,7 @@ void CompactFiniteDiff::filter_cfd_y(double *const u, double *const filty_work,
     double beta = 0.0;
 
 #ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
-    char TRANSB = 'N';
+    char TRANSB = 'T';
     int N = nx;
 
     double *u_curr_chunk = (double *)u;
