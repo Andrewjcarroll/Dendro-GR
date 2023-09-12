@@ -1,6 +1,6 @@
 #include "compact_derivs.h"
 
-// #define FASTER_DERIV_CALC_VIA_MATRIX_MULT
+#define FASTER_DERIV_CALC_VIA_MATRIX_MULT
 
 namespace dendro_cfd {
 
@@ -611,7 +611,7 @@ void CompactFiniteDiff::filter_cfd_x(double *const u, double *const filtx_work,
 void CompactFiniteDiff::filter_cfd_y(double *const u, double *const filty_work,
                                      const double dy, const unsigned int *sz,
                                      unsigned bflag) {
-    if (m_filter_type == 0) {
+    if (m_filter_type == FILT_NONE) {
         return;
     }
 
@@ -620,23 +620,20 @@ void CompactFiniteDiff::filter_cfd_y(double *const u, double *const filty_work,
     const unsigned int nz = sz[2];
 
     // copy u to filtx_work
-    std::copy_n(u, nx * ny * nz, filty_work);
+    // std::copy_n(u, nx * ny * nz, filty_work);
 
     char TRANSA = 'N';
-    int M = ny;
-    int K = ny;
-    double alpha = 1.0 / dy;
-    double beta = 0.0;
-
-#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
     char TRANSB = 'T';
+    int M = ny;
     int N = nx;
+    int K = ny;
+    double alpha = 1.0;
+
+    // TODO: beta needs to be a parameter
+    double beta = 1.0;
 
     double *u_curr_chunk = (double *)u;
-#else
-    char TRANSB = 'N';
-    int N = 1;
-#endif
+    double *filtu_curr_chunk = (double *)filty_work;
 
     double *RF_mat_use = nullptr;
     // to reduce the number of checks, check for failing bflag first
@@ -652,65 +649,54 @@ void CompactFiniteDiff::filter_cfd_y(double *const u, double *const filty_work,
         RF_mat_use = m_R_filter_leftright;
     }
 
-    for (unsigned int k = 0; k < nz; k++) {
 #ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+    typedef libxsmm_mmfunction<double> kernel_type;
+    // kernel_type kernel(LIBXSMM_GEMM_FLAGS(TRANSA, TRANSB), M, N, K, alpha,
+    // beta);
+    // TODO: figure out why an alpha of not 1 is breaking the kernel
+    kernel_type kernel(LIBXSMM_GEMM_FLAG_TRANS_B, M, N, K, 1.0, 1.0);
+    assert(kernel);
+#endif
 
+    for (unsigned int k = 0; k < nz; k++) {
+        // transpose into filty_work as a copy
+        for (unsigned int j = 0; j < ny; j++) {
+            for (unsigned int i = 0; i < nx; i++) {
+                filty_work[j + i * ny] = u[INDEX_3D(i, j, k)];
+            }
+        }
+
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+        // thanks to memory layout, we can just... use this as a matrix
+        // so we can just grab the "matrix" of ny x nx for this one
         // thanks to memory layout, we can just... use this as a matrix
         // so we can just grab the "matrix" of ny x nx for this one
 
+        kernel(RF_mat_use, u_curr_chunk, filty_work);
+
+#else
         dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, RF_mat_use, &M,
                u_curr_chunk, &K, &beta, filty_work, &M);
 
+#endif
+
+        // then transpose right back
         // TODO: see if there's a faster way to copy (i.e. SSE?)
         // the data is transposed so it's much harder to just copy all at once
         for (unsigned int i = 0; i < nx; i++) {
             for (unsigned int j = 0; j < ny; j++) {
-                u[INDEX_3D(i, j, k)] += filty_work[j + i * ny];
+                // u[INDEX_3D(i, j, k)] += filty_work[j + i * ny];
+                u[INDEX_3D(i, j, k)] = filty_work[j + i * ny];
             }
         }
-
         u_curr_chunk += nx * ny;
-#else
-        for (int i = 0; i < nx; i++) {
-            for (int j = 0; j < ny; j++) {
-                m_du1d[j] = u[INDEX_3D(i, j, k)];
-                m_du2d[j] = m_du1d[j];
-            }
-
-            dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, RF_mat_use, &M, m_du1d,
-                   &K, &beta, m_du2d, &M);
-
-            for (int j = 0; j < ny; j++) {
-                u[INDEX_3D(i, j, k)] += m_du2d[j];
-            }
-        }
-
-#endif
-
-#if 0
-        for (unsigned int i = 0; i < nx; i++) {
-            for (unsigned int j = 0; j < ny; j++) {
-                m_u1d[j] = u[INDEX_3D(i, j, k)];
-            }
-            for (unsigned int j = 0; j < ny; j++) {
-                m_du1d[j] = 0.0;
-                for (unsigned int m = 0; m < ny; m++) {
-                    m_du1d[j] += m_R_filter[j * ny + m] * m_u1d[m];
-                }
-            }
-            for (unsigned int j = 0; j < ny; j++) {
-                u[INDEX_3D(i, j, k)] =
-                    m_du1d[j];  // do we need to include a dy here?
-            }
-        }
-#endif
     }
 }
 
 void CompactFiniteDiff::filter_cfd_z(double *const u, double *const filtz_work,
                                      const double dz, const unsigned int *sz,
                                      unsigned bflag) {
-    if (m_filter_type == 0) {
+    if (m_filter_type == FILT_NONE) {
         return;
     }
 
@@ -723,8 +709,8 @@ void CompactFiniteDiff::filter_cfd_z(double *const u, double *const filtz_work,
     int M = nz;
     int N = 1;
     int K = nz;
-    double alpha = 1.0 / dz;
-    double beta = 0.0;
+    double alpha = 1.0;
+    double beta = 1.0;
 
     double *RF_mat_use = nullptr;
     // to reduce the number of checks, check for failing bflag first
@@ -744,6 +730,7 @@ void CompactFiniteDiff::filter_cfd_z(double *const u, double *const filtz_work,
         for (unsigned int i = 0; i < nx; i++) {
             for (unsigned int k = 0; k < nz; k++) {
                 m_u1d[k] = u[INDEX_3D(i, j, k)];
+                filtz_work[k] = u[INDEX_3D(i, j, k)];
             }
 
 #ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
@@ -751,34 +738,16 @@ void CompactFiniteDiff::filter_cfd_z(double *const u, double *const filtz_work,
                    filtz_work, &N);
 
             for (unsigned int k = 0; k < nz; k++) {
-                u[INDEX_3D(i, j, k)] += filtz_work[k];
+                u[INDEX_3D(i, j, k)] = filtz_work[k];
             }
-
 #else
-
             dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, RF_mat_use, &M, m_u1d,
-                   &K, &beta, m_du1d, &M);
+                   &K, &beta, filtz_work, &M);
 
             for (int k = 0; k < nz; k++) {
-                u[INDEX_3D(i, j, k)] += m_du1d[k];
+                u[INDEX_3D(i, j, k)] = filtz_work[k];
             }
 
-#endif
-
-#if 0
-            for (unsigned int k = 0; k < nz; k++) {
-                m_u1d[k] = u[INDEX_3D(i, j, k)];
-            }
-            for (unsigned int k = 0; k < nz; k++) {
-                m_du1d[k] = 0.0;
-                for (unsigned int m = 0; m < nz; m++) {
-                    m_du1d[k] += m_R_filter[k * nz + m] * m_u1d[m];
-                }
-            }
-            for (unsigned int k = 0; k < nz; k++) {
-                u[INDEX_3D(i, j, k)] +=
-                    m_du1d[k];  // do we need to include a dz here?
-            }
 #endif
         }
     }

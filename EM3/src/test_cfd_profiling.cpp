@@ -19,28 +19,33 @@ profiler_t t_compact_deriv_x;
 profiler_t t_compact_deriv_y;
 profiler_t t_compact_deriv_z;
 
-
 void print_profiler_results(uint64_t num_runs) {
     long double num_runs_d = (long double)num_runs;
 
-    std::cout << YLW <<"==== PROFILING RESULTS ====" << NRM << std::endl;
+    std::cout << YLW << "==== PROFILING RESULTS ====" << NRM << std::endl;
     std::cout << "Over " << num_runs << " total runs each" << std::endl;
 
     std::cout << "\t =< Original Stencils >=" << std::endl;
-    std::cout << "\tx deriv: total=" << t_deriv_x.seconds << " average=" << t_deriv_x.seconds / num_runs_d << std::endl;
-    std::cout << "\ty deriv: total=" << t_deriv_y.seconds << " average=" << t_deriv_y.seconds / num_runs_d << std::endl;
-    std::cout << "\tz deriv: total=" << t_deriv_z.seconds << " average=" << t_deriv_z.seconds / num_runs_d << std::endl;
+    std::cout << "\tx deriv: total=" << t_deriv_x.seconds
+              << " average=" << t_deriv_x.seconds / num_runs_d << std::endl;
+    std::cout << "\ty deriv: total=" << t_deriv_y.seconds
+              << " average=" << t_deriv_y.seconds / num_runs_d << std::endl;
+    std::cout << "\tz deriv: total=" << t_deriv_z.seconds
+              << " average=" << t_deriv_z.seconds / num_runs_d << std::endl;
 
     std::cout << std::endl;
 
     std::cout << "\t =< Compact Stencils >=" << std::endl;
-    std::cout << "\tx deriv: total=" << t_compact_deriv_x.seconds << " average=" << t_compact_deriv_x.seconds / num_runs_d << std::endl;
-    std::cout << "\ty deriv: total=" << t_compact_deriv_y.seconds << " average=" << t_compact_deriv_y.seconds / num_runs_d << std::endl;
-    std::cout << "\tz deriv: total=" << t_compact_deriv_z.seconds << " average=" << t_compact_deriv_z.seconds / num_runs_d << std::endl;
-
-
+    std::cout << "\tx deriv: total=" << t_compact_deriv_x.seconds
+              << " average=" << t_compact_deriv_x.seconds / num_runs_d
+              << std::endl;
+    std::cout << "\ty deriv: total=" << t_compact_deriv_y.seconds
+              << " average=" << t_compact_deriv_y.seconds / num_runs_d
+              << std::endl;
+    std::cout << "\tz deriv: total=" << t_compact_deriv_z.seconds
+              << " average=" << t_compact_deriv_z.seconds / num_runs_d
+              << std::endl;
 }
-
 
 }  // namespace helpers
 
@@ -298,6 +303,17 @@ std::tuple<double_t, double_t, double_t> calculate_mse(
     return std::make_tuple(mse, min_err, max_err);
 }
 
+double_t calc_l2_norm(double_t *const u_var, double_t *const v_var,
+                      const uint32_t n) {
+    double_t sum = 0.0;
+
+    for (uint32_t ii = 0; ii < n; ii++) {
+        sum += (u_var[ii] - v_var[ii]) * (u_var[ii] - v_var[ii]);
+    }
+
+    return sqrt(sum);
+}
+
 void test_cfd_with_original_stencil(double_t *const u_var, const uint32_t *sz,
                                     const double *deltas,
                                     dendro_cfd::CompactFiniteDiff *cfd,
@@ -352,12 +368,26 @@ void test_cfd_with_original_stencil(double_t *const u_var, const uint32_t *sz,
     deriv_use_y(derivy_stencil, u_var, deltas[1], sz, bflag);
     deriv_use_z(derivz_stencil, u_var, deltas[2], sz, bflag);
 
-    cfd->filter_cfd_x(u_var, derivx_cfd, deltas[0], sz, bflag);
-    cfd->filter_cfd_y(u_var, derivy_cfd, deltas[0], sz, bflag);
-    cfd->filter_cfd_z(u_var, derivz_cfd, deltas[0], sz, bflag);
-    cfd->cfd_x(derivx_cfd, u_var, deltas[0], sz, bflag);
-    cfd->cfd_y(derivy_cfd, u_var, deltas[1], sz, bflag);
-    cfd->cfd_z(derivz_cfd, u_var, deltas[2], sz, bflag);
+    double *u_var_copy = new double[totalSize];
+
+    std::copy_n(u_var, totalSize, u_var_copy);
+    std::cout << "\nL2 before filts: "
+              << calc_l2_norm(u_var, u_var_copy, totalSize) << std::endl;
+
+    cfd->filter_cfd_x(u_var_copy, derivx_cfd, deltas[0], sz, bflag);
+    std::cout << "L2 after X Filt: "
+              << calc_l2_norm(u_var, u_var_copy, totalSize) << std::endl;
+    cfd->filter_cfd_y(u_var_copy, derivy_cfd, deltas[0], sz, bflag);
+    std::cout << "L2 after Y Filt: "
+              << calc_l2_norm(u_var, u_var_copy, totalSize) << std::endl;
+    cfd->filter_cfd_z(u_var_copy, derivz_cfd, deltas[0], sz, bflag);
+    std::cout << "L2 after Z Filt: "
+              << calc_l2_norm(u_var, u_var_copy, totalSize) << std::endl;
+    cfd->cfd_x(derivx_cfd, u_var_copy, deltas[0], sz, bflag);
+    cfd->cfd_y(derivy_cfd, u_var_copy, deltas[1], sz, bflag);
+    cfd->cfd_z(derivz_cfd, u_var_copy, deltas[2], sz, bflag);
+
+    delete[] u_var_copy;
 
     // then compute the "error" difference between the two
     double_t min_x, max_x, mse_x, min_y, max_y, mse_y, min_z, max_z, mse_z;
@@ -611,9 +641,10 @@ int main(int argc, char **argv) {
     test_cfd_with_original_stencil((double_t *const)u_var, sz, deltas, &cfd,
                                    u_dx_true, u_dy_true, u_dz_true);
 
-    profile_original_stencils((double_t *const)u_var, sz, deltas, num_tests);
+    // profile_original_stencils((double_t *const)u_var, sz, deltas, num_tests);
 
-    profile_compact_stencils((double_t *const)u_var, sz, deltas, &cfd, num_tests);
+    // profile_compact_stencils((double_t *const)u_var, sz, deltas, &cfd,
+    // num_tests);
 
     // then print the profiler results
     helpers::print_profiler_results(num_tests);
