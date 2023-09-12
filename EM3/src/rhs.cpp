@@ -324,8 +324,7 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
 
     em3::timer::t_deriv.start();
 
-    if (em3::EM3_FILTER_TYPE != FILT_KO_DISS or
-        em3::EM3_FILTER_TYPE != FILT_NONE) {
+    if (em3::EM3_FILTER_TYPE != FILT_KO_DISS) {
         // NOTE: the bflag check here is because we currently can't filter
         // boundaries!
         cfd.filter_cfd_x(E0, grad_0_E0, hx, sz, bflag);

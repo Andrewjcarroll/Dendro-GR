@@ -73,13 +73,14 @@ enum FilterType {
     // NO CFD Initialization
     FILT_NONE = -1,
 
+    // standard filters...
+    FILT_KO_DISS = 0,
+
     // isotropic finite difference types
     FILT_KIM_6,
     FILT_JT_6,
     FILT_JT_8,
-
-    // standard filters...
-    FILT_KO_DISS,
+   
 };
 
 // NOTE: these are going to be used as global parameters if they're not physical

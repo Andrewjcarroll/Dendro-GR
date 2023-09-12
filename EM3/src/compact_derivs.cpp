@@ -187,7 +187,7 @@ void CompactFiniteDiff::initialize_cfd_matrix() {
 
 void CompactFiniteDiff::initialize_cfd_filter() {
     // exit early on filter none
-    if (m_filter_type == FILT_NONE) {
+    if (m_filter_type == FILT_NONE || m_filter_type == FILT_KO_DISS) {
         return;
     }
 
@@ -528,7 +528,7 @@ void CompactFiniteDiff::cfd_z(double *const Dzu, const double *const u,
 void CompactFiniteDiff::filter_cfd_x(double *const u, double *const filtx_work,
                                      const double dx, const unsigned int *sz,
                                      unsigned bflag) {
-    if (m_filter_type == FILT_NONE) {
+    if (m_filter_type == FILT_NONE || m_filter_type == FILT_KO_DISS) {
         return;
     }
 
@@ -611,7 +611,7 @@ void CompactFiniteDiff::filter_cfd_x(double *const u, double *const filtx_work,
 void CompactFiniteDiff::filter_cfd_y(double *const u, double *const filty_work,
                                      const double dy, const unsigned int *sz,
                                      unsigned bflag) {
-    if (m_filter_type == FILT_NONE) {
+    if (m_filter_type == FILT_NONE || m_filter_type == FILT_KO_DISS) {
         return;
     }
 
@@ -696,7 +696,7 @@ void CompactFiniteDiff::filter_cfd_y(double *const u, double *const filty_work,
 void CompactFiniteDiff::filter_cfd_z(double *const u, double *const filtz_work,
                                      const double dz, const unsigned int *sz,
                                      unsigned bflag) {
-    if (m_filter_type == FILT_NONE) {
+    if (m_filter_type == FILT_NONE || m_filter_type == FILT_KO_DISS) {
         return;
     }
 
@@ -1072,7 +1072,7 @@ void buildPandQFilterMatrices(double *P, double *Q, const uint32_t padding,
         std::cerr << "WARNING: The JT 8 filter is not yet ready! This will "
                      "lead to unexpected results!"
                   << std::endl;
-    } else if (filtertype == FILT_NONE) {
+    } else if (filtertype == FILT_NONE || filtertype == FILT_KO_DISS) {
         // just.... do nothing... keep them at zeros
         if (is_left_edge or is_right_edge) {
             delete[] tempP;
