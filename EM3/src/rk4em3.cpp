@@ -746,8 +746,11 @@ void RK4_EM3::performSingleIteration() {
             ptmax[1] = GRIDY_TO_Y(blkList[blk].getBlockNode().maxY()) + PW * dy;
             ptmax[2] = GRIDZ_TO_Z(blkList[blk].getBlockNode().maxZ()) + PW * dz;
 
-            em3rhs(m_uiUnzipVarRHS, (const double **)m_uiUnzipVar, offset,
-                   ptmin, ptmax, sz, bflag);
+            // em3rhs(m_uiUnzipVarRHS, (const double **)m_uiUnzipVar, offset,
+            //        ptmin, ptmax, sz, bflag);
+
+            em3rhs_CFD(m_uiUnzipVarRHS, m_uiUnzipVar, offset, ptmin, ptmax,
+                           sz, bflag);
         }
 
 #ifdef DEBUG_RK_SOLVER
