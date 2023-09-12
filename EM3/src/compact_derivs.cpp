@@ -715,15 +715,15 @@ void CompactFiniteDiff::filter_cfd_z(double *const u, double *const filtz_work,
     double *RF_mat_use = nullptr;
     // to reduce the number of checks, check for failing bflag first
     if (!(bflag & (1u << OCT_DIR_BACK)) && !(bflag & (1u << OCT_DIR_FRONT))) {
-        RF_mat_use = m_R;
+        RF_mat_use = m_R_filter;
     } else if ((bflag & (1u << OCT_DIR_BACK)) &&
                !(bflag & (1u << OCT_DIR_FRONT))) {
-        RF_mat_use = m_R_left;
+        RF_mat_use = m_R_filter_left;
     } else if (!(bflag & (1u << OCT_DIR_BACK)) &&
                (bflag & (1u << OCT_DIR_FRONT))) {
-        RF_mat_use = m_R_right;
+        RF_mat_use = m_R_filter_right;
     } else {
-        RF_mat_use = m_R_leftright;
+        RF_mat_use = m_R_filter_leftright;
     }
 
     for (unsigned int j = 0; j < ny; j++) {
