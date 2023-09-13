@@ -3,8 +3,8 @@ project(EM3)
 # only EM3 options
 option(EM3_COMPUTE_CONSTRAINTS "Enable constraint equation computation" ON)
 option(EM3_USE_4TH_ORDER_DERIVS "4th order derivs" OFF)
-option(EM3_USE_6TH_ORDER_DERIVS "6th order derivs" OFF)
-option(EM3_USE_8TH_ORDER_DERIVS "8th order derivs" ON)
+option(EM3_USE_6TH_ORDER_DERIVS "6th order derivs" ON)
+option(EM3_USE_8TH_ORDER_DERIVS "8th order derivs" OFF)
 
 if(EM3_USE_4TH_ORDER_DERIVS)
     set(EM3_USE_6TH_ORDER_DERIVS OFF)
@@ -98,11 +98,11 @@ set(DERIV_TEST_INC include/rhs.h
         include/HAMR.h
         include/kim_filter.h)
 
-message(${BLAS_LIBRARIES})
+# message(${BLAS_LIBRARIES})
 # message(${BLAS_LINKER_FLAGS})
 # message(${TARGET_FILE:xsmm})
 
-add_definitions(-DBLAS=0)
+# add_definitions(-DBLAS=0)
 
 
 set(SOURCE_FILES src/test_cfd_profiling.cpp ${DERIV_TEST_INC} ${DERIV_TEST_SRC})
