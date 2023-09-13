@@ -82,6 +82,7 @@ void CompactFiniteDiff::initialize_cfd_storage() {
     // 0, sizeof *array * size)
 
     m_u1d = new double[m_curr_dim_size];
+    m_u2d = new double[m_curr_dim_size * m_curr_dim_size];
     m_du1d = new double[m_curr_dim_size];
     m_du2d = new double[m_curr_dim_size * m_curr_dim_size];
 }
@@ -284,6 +285,7 @@ void CompactFiniteDiff::delete_cfd_matrices() {
     delete[] m_R_filter;
     delete[] m_R;
     delete[] m_u1d;
+    delete[] m_u2d;
     delete[] m_du1d;
     delete[] m_du2d;
 
@@ -478,7 +480,6 @@ void CompactFiniteDiff::cfd_z(double *const Dzu, const double *const u,
     char TRANSA = 'N';
     char TRANSB = 'N';
     int M = nz;
-    int N = 1;
     int K = nz;
     double alpha = 1.0 / dz;
     double beta = 0.0;
@@ -497,32 +498,60 @@ void CompactFiniteDiff::cfd_z(double *const Dzu, const double *const u,
         R_mat_use = m_R_leftright;
     }
 
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+    int N = nx;
+    typedef libxsmm_mmfunction<double> kernel_type;
+    // kernel_type kernel(LIBXSMM_GEMM_FLAGS(TRANSA, TRANSB), M, N, K, alpha,
+    // beta);
+    // TODO: figure out why an alpha of not 1 is breaking the kernel
+    kernel_type kernel(LIBXSMM_GEMM_FLAG_TRANS_B, M, N, K, 1.0, 0.0);
+    assert(kernel);
+#else
+    int N = 1;
+#endif
+
     for (unsigned int j = 0; j < ny; j++) {
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+        for (unsigned int k = 0; k < nz; k++) {
+            // copy the slice of X values over
+            std::copy_n(&u[INDEX_3D(0, j, k)], nx, &m_u2d[INDEX_N2D(0, k, nx)]);
+        }
+
+        // now do the faster math multiplcation
+
+        kernel(R_mat_use, m_u2d, m_du2d);
+
+        // then we just stick it back in, but now in memory it's stored as z0,
+        // z1, z2,... then increases in x so we can't just do copy_n
+        for (unsigned int i = 0; i < nx; i++) {
+            for (unsigned int k = 0; k < nz; k++) {
+                Dzu[INDEX_3D(i, j, k)] = m_du2d[k + i * nz];
+            }
+        }
+
+#else
         for (unsigned int i = 0; i < nx; i++) {
             for (unsigned int k = 0; k < nz; k++) {
                 m_u1d[k] = u[INDEX_3D(i, j, k)];
             }
-
-            // for (unsigned int k = 0; k < nz; k++) {
-            //     m_du1d[k] = 0.0;
-            //     for (unsigned int m = 0; m < nz; m++) {
-            //         m_du1d[k] += m_R[k * nz + m] * m_u1d[m];
-            //         // m_du1d[k] += m_R[k * nz + m] * u[INDEX_3D(i, j, m)];
-            //     }
-            // }
-
-#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
-            dgemv_(&TRANSA, &M, &K, &alpha, R_mat_use, &M, m_u1d, &N, &beta,
-                   m_du1d, &N);
-#else
-            dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &M, m_u1d,
-                   &K, &beta, m_du1d, &M);
-#endif
-            for (unsigned int k = 0; k < nz; k++) {
-                Dzu[INDEX_3D(i, j, k)] = m_du1d[k];
-            }
         }
+
+        dgemv_(&TRANSA, &M, &K, &alpha, R_mat_use, &M, m_u1d, &N, &beta, m_du1d,
+               &N);
+
+        for (unsigned int k = 0; k < nz; k++) {
+            Dzu[INDEX_3D(i, j, k)] = m_du1d[k];
+        }
+
+#endif
     }
+
+    // NOTE: it is currently faster for these derivatives if we calculate them
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+    for (uint32_t ii = 0; ii < nx * ny * nz; ii++) {
+        Dzu[ii] *= 1 / dz;
+    }
+#endif
 }
 
 void CompactFiniteDiff::filter_cfd_x(double *const u, double *const filtx_work,
