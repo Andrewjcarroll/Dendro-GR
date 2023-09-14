@@ -242,6 +242,7 @@ class CompactFiniteDiff {
 
     // Temporary storage for operations in progress
     double *m_u1d = nullptr;
+    double *m_u2d = nullptr;
     // Additional temporary storage for operations in progress
     double *m_du1d = nullptr;
     double *m_du2d = nullptr;

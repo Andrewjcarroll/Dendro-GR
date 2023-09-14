@@ -518,7 +518,6 @@ void CompactFiniteDiff::cfd_z(double *const Dzu, const double *const u,
         }
 
         // now do the faster math multiplcation
-
         kernel(R_mat_use, m_u2d, m_du2d);
 
         // then we just stick it back in, but now in memory it's stored as z0,
