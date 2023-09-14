@@ -538,8 +538,10 @@ void CompactFiniteDiff::cfd_z(double *const Dzu, const double *const u,
         dgemv_(&TRANSA, &M, &K, &alpha, R_mat_use, &M, m_u1d, &N, &beta, m_du1d,
                &N);
 
-        for (unsigned int k = 0; k < nz; k++) {
-            Dzu[INDEX_3D(i, j, k)] = m_du1d[k];
+        for (unsigned int i = 0; i < nx; i++) {
+            for (unsigned int k = 0; k < nz; k++) {
+                Dzu[INDEX_3D(i, j, k)] = m_du1d[k];
+            }
         }
 
 #endif
@@ -630,10 +632,9 @@ void CompactFiniteDiff::filter_cfd_x(double *const u, double *const filtx_work,
         filtu_curr_chunk += nx * ny;
     }
 
-#ifndef FASTER_DERIV_CALC_VIA_MATRIX_MULT
     // we don't want B to overwrite C other wise we end up with errors
     std::copy_n(filtx_work, nx * ny * nz, u);
-#endif
+
 }
 
 void CompactFiniteDiff::filter_cfd_y(double *const u, double *const filty_work,
@@ -690,7 +691,7 @@ void CompactFiniteDiff::filter_cfd_y(double *const u, double *const filty_work,
         // transpose into filty_work as a copy
         for (unsigned int j = 0; j < ny; j++) {
             for (unsigned int i = 0; i < nx; i++) {
-                filty_work[j + i * ny] = u[INDEX_3D(i, j, k)];
+                filty_work[j + i * ny] = u_curr_chunk[i + j * nx];
             }
         }
 
@@ -714,7 +715,7 @@ void CompactFiniteDiff::filter_cfd_y(double *const u, double *const filty_work,
         for (unsigned int i = 0; i < nx; i++) {
             for (unsigned int j = 0; j < ny; j++) {
                 // u[INDEX_3D(i, j, k)] += filty_work[j + i * ny];
-                u[INDEX_3D(i, j, k)] = filty_work[j + i * ny];
+                u_curr_chunk[i + j * nx] = filty_work[j + i * ny];
             }
         }
         u_curr_chunk += nx * ny;

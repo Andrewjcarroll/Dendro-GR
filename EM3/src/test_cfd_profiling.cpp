@@ -627,7 +627,7 @@ int main(int argc, char **argv) {
     double_t *u_dy_true = new double_t[sz[0] * sz[1] * sz[2]]();
     double_t *u_dz_true = new double_t[sz[0] * sz[1] * sz[2]]();
 
-    double_t deltas[3] = {0.1, 0.2, 0.05};
+    double_t deltas[3] = {0.1, 0.07, 0.05};
 
     init_data(data_init, u_var, sz, deltas, u_dx_true, u_dy_true, u_dz_true);
 
@@ -641,10 +641,10 @@ int main(int argc, char **argv) {
     test_cfd_with_original_stencil((double_t *const)u_var, sz, deltas, &cfd,
                                    u_dx_true, u_dy_true, u_dz_true);
 
-    // profile_original_stencils((double_t *const)u_var, sz, deltas, num_tests);
+    profile_original_stencils((double_t *const)u_var, sz, deltas, num_tests);
 
-    // profile_compact_stencils((double_t *const)u_var, sz, deltas, &cfd,
-    // num_tests);
+    profile_compact_stencils((double_t *const)u_var, sz, deltas, &cfd,
+                             num_tests);
 
     // then print the profiler results
     helpers::print_profiler_results(num_tests);
