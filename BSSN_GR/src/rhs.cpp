@@ -200,13 +200,13 @@ void bssnrhs(double **unzipVarsRHS, const double **uZipVars,
                 const double arg = - w*w*w*w;
                 const double eta = (bssn::RIT_ETA_CENTRAL - bssn::RIT_ETA_OUTER)*exp(arg) + bssn::RIT_ETA_OUTER;
 
-                 if ((x > -0.0001 && x < 0.0001) && (y > -0.0001 && y < 0.0001) && (z > -0.0001 && z < 0.0001)) {
-                    std::cout << "  [originUpdate] - Alpha at (" << x << ", "
-                              << y << ", " << z << ") : " << alpha[pp]
-                              << "  - step: " << bssn::BSSN_CURRENT_RK_STEP
-                              << " (t = " << bssn::BSSN_CURRENT_RK_COORD_TIME
-                              << ")" << std::endl;
-                }
+                //  if ((x > -0.0001 && x < 0.0001) && (y > -0.0001 && y < 0.0001) && (z > -0.0001 && z < 0.0001)) {
+                //     std::cout << "  [originUpdate] - Alpha at (" << x << ", "
+                //               << y << ", " << z << ") : " << alpha[pp]
+                //               << "  - step: " << bssn::BSSN_CURRENT_RK_STEP
+                //               << " (t = " << bssn::BSSN_CURRENT_RK_COORD_TIME
+                //               << ")" << std::endl;
+                // }
 
                 #ifdef USE_ROCHESTER_GAUGE
                     #pragma message("BSSN: using rochester gauge")
