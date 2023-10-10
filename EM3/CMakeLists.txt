@@ -39,15 +39,11 @@ set(EM3_INC include/parameters.h
         include/rk4em3.h
         include/em3Utils.h
         include/rhs.h
-        include/kim.h
         include/compact_derivs.h
         include/derivs.h
         include/profile_params.h
         include/physcon.h 
         include/em3Ctx.h
-        include/JTP6.h
-        include/HAMR.h
-        include/kim_filter.h
         )
 
         set(EM3_SRC src/rk4em3.cpp
@@ -56,12 +52,8 @@ set(EM3_INC include/parameters.h
         src/rhs.cpp
         src/compact_derivs.cpp
         src/derivs.cpp
-        src/kim.cpp
-        src/HAMR.cpp
         src/profile_params.cpp
         src/physcon.cpp 
-        src/JTP6.cpp
-        src/kim_filter.cpp
         #src/em3Ctx.cpp
         )
 
@@ -85,18 +77,10 @@ target_link_libraries(em3Solver dendro5 ${LAPACK_LIBRARIES} ${MPI_LIBRARIES} m)
 target_link_libraries(em3Solver xsmm)
 
 set(DERIV_TEST_SRC src/compact_derivs.cpp
-        src/derivs.cpp
-        src/kim.cpp
-        src/HAMR.cpp
-        src/JTP6.cpp
-        src/kim_filter.cpp)
+        src/derivs.cpp)
 
 set(DERIV_TEST_INC include/rhs.h
-        include/kim.h
-        include/compact_derivs.h
-        include/JTP6.h
-        include/HAMR.h
-        include/kim_filter.h)
+        include/compact_derivs.h)
 
 # message(${BLAS_LIBRARIES})
 # message(${BLAS_LINKER_FLAGS})

@@ -816,6 +816,7 @@ void RK4_EM3::rkSolve() {
     // NOTE: the
     dendro_cfd::cfd.set_filter_type(em3::EM3_FILTER_TYPE);
     dendro_cfd::cfd.set_deriv_type(em3::EM3_DERIV_TYPE);
+    dendro_cfd::cfd.set_second_deriv_type(em3::EM3_2ND_DERIV_TYPE);
     dendro_cfd::cfd.set_padding_size(em3::EM3_PADDING_WIDTH);
     // NOTE: the changing of dim size will reinitialize everything if the size
     // is different meaning that the main matrix will be recalculated and the

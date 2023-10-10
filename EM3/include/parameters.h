@@ -320,6 +320,7 @@ namespace em3
     extern bool EM3_VTU_Z_SLICE_ONLY;
 
     extern dendro_cfd::DerType EM3_DERIV_TYPE;
+    extern dendro_cfd::DerType2nd EM3_2ND_DERIV_TYPE;
      /**@brief: Used to choose which compact finite difference deriv Filter to use*/
     extern dendro_cfd::FilterType EM3_FILTER_TYPE;
 

@@ -79,9 +79,9 @@
                 "EM3_RK45_DESIRED_TOL":1e-3,
                 "           " : "Kreiss-Oliger dissipation",
                 "KO_DISS_SIGMA": 4e-1,
-                "           " : "Derivative type. 0-std FD, 1-Kim CFD, 2-HAMR",
+                "           " : "Derivative type. -1: Default Derivs, 0 P1_04, 1: P1_O6, 2: Q1_O6_ETA1, 3: KIM_04, 4: HAMR_04, 5: JT_06, 6: EXPLCT_04, 7: EXPLCT_06, 8: EXPLCT_08",
                 "EM3_DERIV_TYPE": 0,
-                "           " : "Filter type. 0-std FD, 1-Kim",
+                "           " : "Filter type. -1: NONE, 0: KO_DISS, 1: KIM_6, 2: JT_6, 3: JT_8, 4: EXPLCT_KO",
                 "EM3_FILTER_TYPE": 0,
     
         "__comment__" : "=======================================================",
