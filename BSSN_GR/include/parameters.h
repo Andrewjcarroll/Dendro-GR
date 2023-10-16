@@ -129,6 +129,9 @@ namespace bssn
     /**@brief: AMR radius for the BH location based refinement. (BH2) */
     extern double BSSN_BH2_AMR_R;
 
+    /**@brief: For BH location based refinement, ratio of radii for level N, N-1 refinement about each black hole. */
+    extern double BSSN_AMR_R_RATIO;
+
     /**@brief: BH Mass. (BH1)*/
     extern double BSSN_BH1_MASS;
 
