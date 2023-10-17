@@ -2,8 +2,7 @@
 
 using namespace std;
 
-void KimDeriv4_dP(double *P, int n)
-{
+void KimDeriv4_dP(double *P, int n) {
     // defining the constants
     double g10 = 0.11737546726594537;
     double g20 = -0.067477420334188354;
@@ -19,27 +18,18 @@ void KimDeriv4_dP(double *P, int n)
     double beta = 0.09549533555017055;
 
     // Set the diagonal values of the matrix
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < n; j++)
-        {
-            if (i == j)
-            {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            if (i == j) {
                 // Main diagonal
                 P[i * n + j] = 1;
-            }
-            else if (i == j + 1 || i == j - 1)
-            {
+            } else if (i == j + 1 || i == j - 1) {
                 // Adjacent diagonals
                 P[i * n + j] = alpha;
-            }
-            else if (i == j + 2 || i == j - 2)
-            {
+            } else if (i == j + 2 || i == j - 2) {
                 // Adjacent super-diagonals
                 P[i * n + j] = beta;
-            }
-            else
-            {
+            } else {
                 P[i * n + j] = 0;
             }
         }
@@ -69,8 +59,7 @@ void KimDeriv4_dP(double *P, int n)
     P[(n - 1) * n + (n - 2)] = g01;
 }
 
-void KimDeriv4_dQ(double *Q, int n)
-{
+void KimDeriv4_dQ(double *Q, int n) {
     // defining some important variables
     double b10 = -0.4197688256685424;
     double b20 = 0.20875393530974462;
@@ -105,47 +94,30 @@ void KimDeriv4_dQ(double *Q, int n)
     double b11 = -(b10 + b12 + b13 + b14 + b15 + b16);
     double b22 = -(b20 + b21 + b23 + b24 + b25 + b26);
 
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < n; j++)
-        {
-            if (i == j)
-            {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            if (i == j) {
                 // Main diagonal
                 Q[i * n + j] = 0.0;
-            }
-            else if (i == j - 1)
-            {
+            } else if (i == j - 1) {
                 // Adjacent diagonals
                 Q[i * n + j] = a1;
-            }
-            else if (i == j + 1)
-            {
+            } else if (i == j + 1) {
                 // Adjacent diagonals
                 Q[i * n + j] = -a1;
-            }
-            else if (i == j - 2)
-            {
+            } else if (i == j - 2) {
                 // Super diagonals
                 Q[i * n + j] = a2;
-            }
-            else if (i == j + 2)
-            {
+            } else if (i == j + 2) {
                 // Super diagonals on
                 Q[i * n + j] = -a2;
-            }
-            else if (i == j - 3)
-            {
+            } else if (i == j - 3) {
                 // Super +1 diagonals on
                 Q[i * n + j] = a3;
-            }
-            else if (i == j + 3)
-            {
+            } else if (i == j + 3) {
                 // Super +1 diagonals on
                 Q[i * n + j] = -a3;
-            }
-            else
-            {
+            } else {
                 Q[i * n + j] = 0.0;
             }
         }
@@ -198,15 +170,12 @@ void KimDeriv4_dQ(double *Q, int n)
     Q[(n - 1) * n + (n - 3)] = -b02;
     Q[(n - 1) * n + (n - 2)] = -b01;
     Q[(n - 1) * n + (n - 1)] = -b00;
-
 }
 
-bool initKimDeriv4(double *R, const unsigned int n)
-{
-
-    double *P = new double[n*n];
-    double *Q = new double[n*n];
-    KimDeriv4_dP(P, n); // define the matrix P using the function provided
+bool initKimDeriv4(double *R, const unsigned int n) {
+    double *P = new double[n * n];
+    double *Q = new double[n * n];
+    KimDeriv4_dP(P, n);  // define the matrix P using the function provided
 
     // Define the matrix Q
     KimDeriv4_dQ(Q, n);
@@ -214,11 +183,10 @@ bool initKimDeriv4(double *R, const unsigned int n)
     // Compute the LU decomposition of the matrix P
     int *ipiv = new int[n];
     int info;
-    int nx = n; // lapack needs fortran-compatible ints, not const unsigned
+    int nx = n;  // lapack needs fortran-compatible ints, not const unsigned
     dgetrf_(&nx, &nx, P, &nx, ipiv, &info);
 
-    if (info != 0)
-    {
+    if (info != 0) {
         std::cerr << "LU factorization failed: " << info << std::endl;
         delete[] ipiv;
         return 1;
@@ -231,8 +199,7 @@ bool initKimDeriv4(double *R, const unsigned int n)
     double *work = new double[lwork];
     dgetri_(&nx, Pinv, &nx, ipiv, work, &lwork, &info);
 
-    if (info != 0)
-    {
+    if (info != 0) {
         std::cerr << "Matrix inversion failed: " << info << std::endl;
         delete[] ipiv;
         delete[] Pinv;
@@ -241,13 +208,10 @@ bool initKimDeriv4(double *R, const unsigned int n)
     }
 
     // Compute the product of the inverted matrix Pinv and matrix Q
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < n; j++)
-        {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
             R[i * n + j] = 0.0;
-            for (int k = 0; k < n; k++)
-            {
+            for (int k = 0; k < n; k++) {
                 R[i * n + j] += Pinv[i * n + k] * Q[k * n + j];
             }
         }

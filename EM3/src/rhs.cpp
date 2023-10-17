@@ -1,6 +1,7 @@
 #include "rhs.h"
 using namespace std;
 using namespace em3;
+using namespace dendro_cfd;
 
 /*----------------------------------------------------------------------;
  *
@@ -30,6 +31,8 @@ void em3rhs(double **unzipVarsRHS, const double **uZipVars,
     // double *E_Grad_rhs2 = &unzipVarsRHS[VAR::U_Grad_E2][offset];
     mem::memory_pool<DendroScalar> *__mem_pool = &EM3_MEM_POOL;
 
+    double *const deriv_base = em3::EM3_DERIV_WORKSPACE;
+
     const unsigned int nx = sz[0];
     const unsigned int ny = sz[1];
     const unsigned int nz = sz[2];
@@ -43,6 +46,7 @@ void em3rhs(double **unzipVarsRHS, const double **uZipVars,
     int idx[3];
 
     unsigned int n = sz[0] * sz[1] * sz[2];
+    const unsigned int BLK_SZ = n;
 
     em3::timer::t_deriv.start();
 
@@ -60,29 +64,29 @@ void em3rhs(double **unzipVarsRHS, const double **uZipVars,
         J2[m] = 0.0;
     }
 
-    double *grad_0_E0 = __mem_pool->allocate(n);
-    double *grad_1_E0 = __mem_pool->allocate(n);
-    double *grad_2_E0 = __mem_pool->allocate(n);
+    double *grad_0_E0 = deriv_base + 0 * BLK_SZ;
+    double *grad_1_E0 = deriv_base + 1 * BLK_SZ;
+    double *grad_2_E0 = deriv_base + 2 * BLK_SZ;
 
-    double *grad_0_E1 = __mem_pool->allocate(n);
-    double *grad_1_E1 = __mem_pool->allocate(n);
-    double *grad_2_E1 = __mem_pool->allocate(n);
+    double *grad_0_E1 = deriv_base + 3 * BLK_SZ;
+    double *grad_1_E1 = deriv_base + 4 * BLK_SZ;
+    double *grad_2_E1 = deriv_base + 5 * BLK_SZ;
 
-    double *grad_0_E2 = __mem_pool->allocate(n);
-    double *grad_1_E2 = __mem_pool->allocate(n);
-    double *grad_2_E2 = __mem_pool->allocate(n);
+    double *grad_0_E2 = deriv_base + 6 * BLK_SZ;
+    double *grad_1_E2 = deriv_base + 7 * BLK_SZ;
+    double *grad_2_E2 = deriv_base + 8 * BLK_SZ;
 
-    double *grad_0_B0 = __mem_pool->allocate(n);
-    double *grad_1_B0 = __mem_pool->allocate(n);
-    double *grad_2_B0 = __mem_pool->allocate(n);
+    double *grad_0_B0 = deriv_base + 9 * BLK_SZ;
+    double *grad_1_B0 = deriv_base + 10 * BLK_SZ;
+    double *grad_2_B0 = deriv_base + 11 * BLK_SZ;
 
-    double *grad_0_B1 = __mem_pool->allocate(n);
-    double *grad_1_B1 = __mem_pool->allocate(n);
-    double *grad_2_B1 = __mem_pool->allocate(n);
+    double *grad_0_B1 = deriv_base + 12 * BLK_SZ;
+    double *grad_1_B1 = deriv_base + 13 * BLK_SZ;
+    double *grad_2_B1 = deriv_base + 14 * BLK_SZ;
 
-    double *grad_0_B2 = __mem_pool->allocate(n);
-    double *grad_1_B2 = __mem_pool->allocate(n);
-    double *grad_2_B2 = __mem_pool->allocate(n);
+    double *grad_0_B2 = deriv_base + 15 * BLK_SZ;
+    double *grad_1_B2 = deriv_base + 16 * BLK_SZ;
+    double *grad_2_B2 = deriv_base + 17 * BLK_SZ;
 
     deriv_x(grad_0_E0, E0, hx, sz, bflag);
     deriv_y(grad_1_E0, E0, hy, sz, bflag);
@@ -216,30 +220,6 @@ void em3rhs(double **unzipVarsRHS, const double **uZipVars,
 
     em3::timer::t_deriv.start();
 
-    __mem_pool->free(grad_0_E0);
-    __mem_pool->free(grad_1_E0);
-    __mem_pool->free(grad_2_E0);
-
-    __mem_pool->free(grad_0_E1);
-    __mem_pool->free(grad_1_E1);
-    __mem_pool->free(grad_2_E1);
-
-    __mem_pool->free(grad_0_E2);
-    __mem_pool->free(grad_1_E2);
-    __mem_pool->free(grad_2_E2);
-
-    __mem_pool->free(grad_0_B0);
-    __mem_pool->free(grad_1_B0);
-    __mem_pool->free(grad_2_B0);
-
-    __mem_pool->free(grad_0_B1);
-    __mem_pool->free(grad_1_B1);
-    __mem_pool->free(grad_2_B1);
-
-    __mem_pool->free(grad_0_B2);
-    __mem_pool->free(grad_1_B2);
-    __mem_pool->free(grad_2_B2);
-
     __mem_pool->free(J0);
     __mem_pool->free(J1);
     __mem_pool->free(J2);
@@ -256,10 +236,9 @@ void em3rhs(double **unzipVarsRHS, const double **uZipVars,
 }
 
 void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
-                const unsigned int &offset, const double *pmin, const double *pmax,
-                const unsigned int *sz, const unsigned int &bflag)
-{
-
+                const unsigned int &offset, const double *pmin,
+                const double *pmax, const unsigned int *sz,
+                const unsigned int &bflag) {
     double *const E0 = &uZipVars[VAR::U_E0][offset];
     double *const E1 = &uZipVars[VAR::U_E1][offset];
     double *const E2 = &uZipVars[VAR::U_E2][offset];
@@ -279,6 +258,7 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
     // double *E_Grad_rhs1 = &unzipVarsRHS[VAR::U_Grad_E1][offset];
     // double *E_Grad_rhs2 = &unzipVarsRHS[VAR::U_Grad_E2][offset];
     mem::memory_pool<DendroScalar> *__mem_pool = &EM3_MEM_POOL;
+    double *const deriv_base = em3::EM3_DERIV_WORKSPACE;
 
     const unsigned int nx = sz[0];
     const unsigned int ny = sz[1];
@@ -293,17 +273,16 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
     int idx[3];
 
     unsigned int n = sz[0] * sz[1] * sz[2];
+    const unsigned int BLK_SZ = n;
 
-    em3::timer::t_deriv.start();
-
+    // additional variables we need to hold on to
     double *rho_e = __mem_pool->allocate(n);
 
     double *J0 = __mem_pool->allocate(n);
     double *J1 = __mem_pool->allocate(n);
     double *J2 = __mem_pool->allocate(n);
 
-    for (unsigned int m = 0; m < n; m++)
-    {
+    for (unsigned int m = 0; m < n; m++) {
         rho_e[m] = 0.0;
 
         J0[m] = 0.0;
@@ -311,66 +290,69 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
         J2[m] = 0.0;
     }
 
-    double *grad_0_E0 = __mem_pool->allocate(n);
-    double *grad_1_E0 = __mem_pool->allocate(n);
-    double *grad_2_E0 = __mem_pool->allocate(n);
+    double *grad_0_E0 = deriv_base + 0 * BLK_SZ;
+    double *grad_1_E0 = deriv_base + 1 * BLK_SZ;
+    double *grad_2_E0 = deriv_base + 2 * BLK_SZ;
 
-    double *grad_0_E1 = __mem_pool->allocate(n);
-    double *grad_1_E1 = __mem_pool->allocate(n);
-    double *grad_2_E1 = __mem_pool->allocate(n);
+    double *grad_0_E1 = deriv_base + 3 * BLK_SZ;
+    double *grad_1_E1 = deriv_base + 4 * BLK_SZ;
+    double *grad_2_E1 = deriv_base + 5 * BLK_SZ;
 
-    double *grad_0_E2 = __mem_pool->allocate(n);
-    double *grad_1_E2 = __mem_pool->allocate(n);
-    double *grad_2_E2 = __mem_pool->allocate(n);
+    double *grad_0_E2 = deriv_base + 6 * BLK_SZ;
+    double *grad_1_E2 = deriv_base + 7 * BLK_SZ;
+    double *grad_2_E2 = deriv_base + 8 * BLK_SZ;
 
-    double *grad_0_B0 = __mem_pool->allocate(n);
-    double *grad_1_B0 = __mem_pool->allocate(n);
-    double *grad_2_B0 = __mem_pool->allocate(n);
+    double *grad_0_B0 = deriv_base + 9 * BLK_SZ;
+    double *grad_1_B0 = deriv_base + 10 * BLK_SZ;
+    double *grad_2_B0 = deriv_base + 11 * BLK_SZ;
 
-    double *grad_0_B1 = __mem_pool->allocate(n);
-    double *grad_1_B1 = __mem_pool->allocate(n);
-    double *grad_2_B1 = __mem_pool->allocate(n);
+    double *grad_0_B1 = deriv_base + 12 * BLK_SZ;
+    double *grad_1_B1 = deriv_base + 13 * BLK_SZ;
+    double *grad_2_B1 = deriv_base + 14 * BLK_SZ;
 
-    double *grad_0_B2 = __mem_pool->allocate(n);
-    double *grad_1_B2 = __mem_pool->allocate(n);
-    double *grad_2_B2 = __mem_pool->allocate(n);
+    double *grad_0_B2 = deriv_base + 15 * BLK_SZ;
+    double *grad_1_B2 = deriv_base + 16 * BLK_SZ;
+    double *grad_2_B2 = deriv_base + 17 * BLK_SZ;
 
     const unsigned int PW = em3::EM3_PADDING_WIDTH;
 
-    unsigned int size_CFD  = nx;
-    if (nx!=17 || ny!=17 || nz!=17)
-    {
-      std::cout <<"BLOCK SIZE " << nx << ' '<< ny <<' '<< nz << std::endl;
+    unsigned int size_CFD = nx;
+    // if (nx!=17 || ny!=17 || nz!=17)
+    // {
+    //   std::cout <<"BLOCK SIZE " << nx << ' '<< ny <<' '<< nz << std::endl;
+    // }
+
+    em3::timer::t_deriv.start();
+
+    if (bflag == 0) {
+        // NOTE: the bflag check here is because we currently can't filter
+        // boundaries!
+        cfd.filter_cfd_x(E0, hx, sz, bflag);
+        cfd.filter_cfd_y(E0, hy, sz, bflag);
+        cfd.filter_cfd_z(E0, hz, sz, bflag);
+
+        cfd.filter_cfd_x(E1, hx, sz, bflag);
+        cfd.filter_cfd_y(E1, hy, sz, bflag);
+        cfd.filter_cfd_z(E1, hz, sz, bflag);
+
+        cfd.filter_cfd_x(E2, hx, sz, bflag);
+        cfd.filter_cfd_y(E2, hy, sz, bflag);
+        cfd.filter_cfd_z(E2, hz, sz, bflag);
+
+        cfd.filter_cfd_x(B0, hx, sz, bflag);
+        cfd.filter_cfd_y(B0, hy, sz, bflag);
+        cfd.filter_cfd_z(B0, hz, sz, bflag);
+
+        cfd.filter_cfd_x(B1, hx, sz, bflag);
+        cfd.filter_cfd_y(B1, hy, sz, bflag);
+        cfd.filter_cfd_z(B1, hz, sz, bflag);
+
+        cfd.filter_cfd_x(B2, hx, sz, bflag);
+        cfd.filter_cfd_y(B2, hy, sz, bflag);
+        cfd.filter_cfd_z(B2, hz, sz, bflag);
     }
-    
-    if (bflag == 0){
-    filter_cfd_x(E0, hx, sz, RF, grad_0_E0, grad_1_E0, bflag);
-    filter_cfd_y(E0, hy, sz, RF, grad_0_E0, grad_1_E0, bflag);
-    filter_cfd_z(E0, hz, sz, RF, grad_0_E0, grad_1_E0, bflag);
 
-    filter_cfd_x(E1, hx, sz, RF, grad_0_E0, grad_1_E0, bflag);
-    filter_cfd_y(E1, hy, sz, RF, grad_0_E0, grad_1_E0, bflag);
-    filter_cfd_z(E1, hz, sz, RF, grad_0_E0, grad_1_E0, bflag);
-
-    filter_cfd_x(E2, hx, sz, RF, grad_0_E0, grad_1_E0, bflag);
-    filter_cfd_y(E2, hy, sz, RF, grad_0_E0, grad_1_E0, bflag);
-    filter_cfd_z(E2, hz, sz, RF, grad_0_E0, grad_1_E0, bflag);
-
-    filter_cfd_x(B0, hx, sz, RF, grad_0_E0, grad_1_E0, bflag);
-    filter_cfd_y(B0, hy, sz, RF, grad_0_E0, grad_1_E0, bflag);
-    filter_cfd_z(B0, hz, sz, RF, grad_0_E0, grad_1_E0, bflag);
-
-    filter_cfd_x(B1, hx, sz, RF, grad_0_E0, grad_1_E0, bflag);
-    filter_cfd_y(B1, hy, sz, RF, grad_0_E0, grad_1_E0, bflag);
-    filter_cfd_z(B1, hz, sz, RF, grad_0_E0, grad_1_E0, bflag);
-
-    filter_cfd_x(B2, hx, sz, RF, grad_0_E0, grad_1_E0, bflag);
-    filter_cfd_y(B2, hy, sz, RF, grad_0_E0, grad_1_E0, bflag);
-    filter_cfd_z(B2, hz, sz, RF, grad_0_E0, grad_1_E0, bflag);
-    }
-
-    if (em3::EM3_DERIV_TYPE == 0)
-    {
+    if (em3::EM3_DERIV_TYPE == 0) {
         deriv_x(grad_0_E0, E0, hx, sz, bflag);
         deriv_y(grad_1_E0, E0, hy, sz, bflag);
         deriv_z(grad_2_E0, E0, hz, sz, bflag);
@@ -394,114 +376,106 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
         deriv_x(grad_0_B2, B2, hx, sz, bflag);
         deriv_y(grad_1_B2, B2, hy, sz, bflag);
         deriv_z(grad_2_B2, B2, hz, sz, bflag);
-    }
-    else if (em3::EM3_DERIV_TYPE == 1)
-    {
-        if (bflag == 0){
-        cfd_x(grad_0_E0, E0, hx, sz, R, u1d, du1d, bflag);
-        cfd_y(grad_1_E0, E0, hy, sz, R, u1d, du1d, bflag);
-        cfd_z(grad_2_E0, E0, hz, sz, R, u1d, du1d, bflag);
+    } else if (em3::EM3_DERIV_TYPE == 1) {
+        if (bflag == 0) {
+            cfd.cfd_x(grad_0_E0, E0, hx, sz, bflag);
+            cfd.cfd_y(grad_1_E0, E0, hy, sz, bflag);
+            cfd.cfd_z(grad_2_E0, E0, hz, sz, bflag);
 
-        cfd_x(grad_0_E1, E1, hx, sz, R, u1d, du1d, bflag);
-        cfd_y(grad_1_E1, E1, hy, sz, R, u1d, du1d, bflag);
-        cfd_z(grad_2_E1, E1, hz, sz, R, u1d, du1d, bflag);
+            cfd.cfd_x(grad_0_E1, E1, hx, sz, bflag);
+            cfd.cfd_y(grad_1_E1, E1, hy, sz, bflag);
+            cfd.cfd_z(grad_2_E1, E1, hz, sz, bflag);
 
-        cfd_x(grad_0_E2, E2, hx, sz, R, u1d, du1d, bflag);
-        cfd_y(grad_1_E2, E2, hy, sz, R, u1d, du1d, bflag);
-        cfd_z(grad_2_E2, E2, hz, sz, R, u1d, du1d, bflag);
+            cfd.cfd_x(grad_0_E2, E2, hx, sz, bflag);
+            cfd.cfd_y(grad_1_E2, E2, hy, sz, bflag);
+            cfd.cfd_z(grad_2_E2, E2, hz, sz, bflag);
 
-        cfd_x(grad_0_B0, B0, hx, sz, R, u1d, du1d, bflag);
-        cfd_y(grad_1_B0, B0, hy, sz, R, u1d, du1d, bflag);
-        cfd_z(grad_2_B0, B0, hz, sz, R, u1d, du1d, bflag);
+            cfd.cfd_x(grad_0_B0, B0, hx, sz, bflag);
+            cfd.cfd_y(grad_1_B0, B0, hy, sz, bflag);
+            cfd.cfd_z(grad_2_B0, B0, hz, sz, bflag);
 
-        cfd_x(grad_0_B1, B1, hx, sz, R, u1d, du1d, bflag);
-        cfd_y(grad_1_B1, B1, hy, sz, R, u1d, du1d, bflag);
-        cfd_z(grad_2_B1, B1, hz, sz, R, u1d, du1d, bflag);
+            cfd.cfd_x(grad_0_B1, B1, hx, sz, bflag);
+            cfd.cfd_y(grad_1_B1, B1, hy, sz, bflag);
+            cfd.cfd_z(grad_2_B1, B1, hz, sz, bflag);
 
-        cfd_x(grad_0_B2, B2, hx, sz, R, u1d, du1d, bflag);
-        cfd_y(grad_1_B2, B2, hy, sz, R, u1d, du1d, bflag);
-        cfd_z(grad_2_B2, B2, hz, sz, R, u1d, du1d, bflag);
+            cfd.cfd_x(grad_0_B2, B2, hx, sz, bflag);
+            cfd.cfd_y(grad_1_B2, B2, hy, sz, bflag);
+            cfd.cfd_z(grad_2_B2, B2, hz, sz, bflag);
         } else {
             // std::cout << "bflag " << bflag << std::endl;
-        deriv_x(grad_0_E0, E0, hx, sz, bflag);
-        deriv_y(grad_1_E0, E0, hy, sz, bflag);
-        deriv_z(grad_2_E0, E0, hz, sz, bflag);
+            deriv_x(grad_0_E0, E0, hx, sz, bflag);
+            deriv_y(grad_1_E0, E0, hy, sz, bflag);
+            deriv_z(grad_2_E0, E0, hz, sz, bflag);
 
-        deriv_x(grad_0_E1, E1, hx, sz, bflag);
-        deriv_y(grad_1_E1, E1, hy, sz, bflag);
-        deriv_z(grad_2_E1, E1, hz, sz, bflag);
+            deriv_x(grad_0_E1, E1, hx, sz, bflag);
+            deriv_y(grad_1_E1, E1, hy, sz, bflag);
+            deriv_z(grad_2_E1, E1, hz, sz, bflag);
 
-        deriv_x(grad_0_E2, E2, hx, sz, bflag);
-        deriv_y(grad_1_E2, E2, hy, sz, bflag);
-        deriv_z(grad_2_E2, E2, hz, sz, bflag);
+            deriv_x(grad_0_E2, E2, hx, sz, bflag);
+            deriv_y(grad_1_E2, E2, hy, sz, bflag);
+            deriv_z(grad_2_E2, E2, hz, sz, bflag);
 
-        deriv_x(grad_0_B0, B0, hx, sz, bflag);
-        deriv_y(grad_1_B0, B0, hy, sz, bflag);
-        deriv_z(grad_2_B0, B0, hz, sz, bflag);
+            deriv_x(grad_0_B0, B0, hx, sz, bflag);
+            deriv_y(grad_1_B0, B0, hy, sz, bflag);
+            deriv_z(grad_2_B0, B0, hz, sz, bflag);
 
-        deriv_x(grad_0_B1, B1, hx, sz, bflag);
-        deriv_y(grad_1_B1, B1, hy, sz, bflag);
-        deriv_z(grad_2_B1, B1, hz, sz, bflag);
+            deriv_x(grad_0_B1, B1, hx, sz, bflag);
+            deriv_y(grad_1_B1, B1, hy, sz, bflag);
+            deriv_z(grad_2_B1, B1, hz, sz, bflag);
 
-        deriv_x(grad_0_B2, B2, hx, sz, bflag);
-        deriv_y(grad_1_B2, B2, hy, sz, bflag);
-        deriv_z(grad_2_B2, B2, hz, sz, bflag);
+            deriv_x(grad_0_B2, B2, hx, sz, bflag);
+            deriv_y(grad_1_B2, B2, hy, sz, bflag);
+            deriv_z(grad_2_B2, B2, hz, sz, bflag);
         }
-    }
-    else if (em3::EM3_DERIV_TYPE == 2)
-    {
-        cfd_x(grad_0_E0, E0, hx, sz, R, u1d, du1d, bflag);
-        cfd_y(grad_1_E0, E0, hy, sz, R, u1d, du1d, bflag);
-        cfd_z(grad_2_E0, E0, hz, sz, R, u1d, du1d, bflag);
+    } else if (em3::EM3_DERIV_TYPE == 2) {
+        cfd.cfd_x(grad_0_E0, E0, hx, sz, bflag);
+        cfd.cfd_y(grad_1_E0, E0, hy, sz, bflag);
+        cfd.cfd_z(grad_2_E0, E0, hz, sz, bflag);
 
-        cfd_x(grad_0_E1, E1, hx, sz, R, u1d, du1d, bflag);
-        cfd_y(grad_1_E1, E1, hy, sz, R, u1d, du1d, bflag);
-        cfd_z(grad_2_E1, E1, hz, sz, R, u1d, du1d, bflag);
+        cfd.cfd_x(grad_0_E1, E1, hx, sz, bflag);
+        cfd.cfd_y(grad_1_E1, E1, hy, sz, bflag);
+        cfd.cfd_z(grad_2_E1, E1, hz, sz, bflag);
 
-        cfd_x(grad_0_E2, E2, hx, sz, R, u1d, du1d, bflag);
-        cfd_y(grad_1_E2, E2, hy, sz, R, u1d, du1d, bflag);
-        cfd_z(grad_2_E2, E2, hz, sz, R, u1d, du1d, bflag);
+        cfd.cfd_x(grad_0_E2, E2, hx, sz, bflag);
+        cfd.cfd_y(grad_1_E2, E2, hy, sz, bflag);
+        cfd.cfd_z(grad_2_E2, E2, hz, sz, bflag);
 
-        cfd_x(grad_0_B0, B0, hx, sz, R, u1d, du1d, bflag);
-        cfd_y(grad_1_B0, B0, hy, sz, R, u1d, du1d, bflag);
-        cfd_z(grad_2_B0, B0, hz, sz, R, u1d, du1d, bflag);
+        cfd.cfd_x(grad_0_B0, B0, hx, sz, bflag);
+        cfd.cfd_y(grad_1_B0, B0, hy, sz, bflag);
+        cfd.cfd_z(grad_2_B0, B0, hz, sz, bflag);
 
-        cfd_x(grad_0_B1, B1, hx, sz, R, u1d, du1d, bflag);
-        cfd_y(grad_1_B1, B1, hy, sz, R, u1d, du1d, bflag);
-        cfd_z(grad_2_B1, B1, hz, sz, R, u1d, du1d, bflag);
+        cfd.cfd_x(grad_0_B1, B1, hx, sz, bflag);
+        cfd.cfd_y(grad_1_B1, B1, hy, sz, bflag);
+        cfd.cfd_z(grad_2_B1, B1, hz, sz, bflag);
 
-        cfd_x(grad_0_B2, B2, hx, sz, R, u1d, du1d, bflag);
-        cfd_y(grad_1_B2, B2, hy, sz, R, u1d, du1d, bflag);
-        cfd_z(grad_2_B2, B2, hz, sz, R, u1d, du1d, bflag);
-    }
-    else if (em3::EM3_DERIV_TYPE == 3)
-    {
-        cfd_x(grad_0_E0, E0, hx, sz, R, u1d, du1d, bflag);
-        cfd_y(grad_1_E0, E0, hy, sz, R, u1d, du1d, bflag);
-        cfd_z(grad_2_E0, E0, hz, sz, R, u1d, du1d, bflag);
+        cfd.cfd_x(grad_0_B2, B2, hx, sz, bflag);
+        cfd.cfd_y(grad_1_B2, B2, hy, sz, bflag);
+        cfd.cfd_z(grad_2_B2, B2, hz, sz, bflag);
+    } else if (em3::EM3_DERIV_TYPE == 3) {
+        cfd.cfd_x(grad_0_E0, E0, hx, sz, bflag);
+        cfd.cfd_y(grad_1_E0, E0, hy, sz, bflag);
+        cfd.cfd_z(grad_2_E0, E0, hz, sz, bflag);
 
-        cfd_x(grad_0_E1, E1, hx, sz, R, u1d, du1d, bflag);
-        cfd_y(grad_1_E1, E1, hy, sz, R, u1d, du1d, bflag);
-        cfd_z(grad_2_E1, E1, hz, sz, R, u1d, du1d, bflag);
+        cfd.cfd_x(grad_0_E1, E1, hx, sz, bflag);
+        cfd.cfd_y(grad_1_E1, E1, hy, sz, bflag);
+        cfd.cfd_z(grad_2_E1, E1, hz, sz, bflag);
 
-        cfd_x(grad_0_E2, E2, hx, sz, R, u1d, du1d, bflag);
-        cfd_y(grad_1_E2, E2, hy, sz, R, u1d, du1d, bflag);
-        cfd_z(grad_2_E2, E2, hz, sz, R, u1d, du1d, bflag);
+        cfd.cfd_x(grad_0_E2, E2, hx, sz, bflag);
+        cfd.cfd_y(grad_1_E2, E2, hy, sz, bflag);
+        cfd.cfd_z(grad_2_E2, E2, hz, sz, bflag);
 
-        cfd_x(grad_0_B0, B0, hx, sz, R, u1d, du1d, bflag);
-        cfd_y(grad_1_B0, B0, hy, sz, R, u1d, du1d, bflag);
-        cfd_z(grad_2_B0, B0, hz, sz, R, u1d, du1d, bflag);
+        cfd.cfd_x(grad_0_B0, B0, hx, sz, bflag);
+        cfd.cfd_y(grad_1_B0, B0, hy, sz, bflag);
+        cfd.cfd_z(grad_2_B0, B0, hz, sz, bflag);
 
-        cfd_x(grad_0_B1, B1, hx, sz, R, u1d, du1d, bflag);
-        cfd_y(grad_1_B1, B1, hy, sz, R, u1d, du1d, bflag);
-        cfd_z(grad_2_B1, B1, hz, sz, R, u1d, du1d, bflag);
+        cfd.cfd_x(grad_0_B1, B1, hx, sz, bflag);
+        cfd.cfd_y(grad_1_B1, B1, hy, sz, bflag);
+        cfd.cfd_z(grad_2_B1, B1, hz, sz, bflag);
 
-        cfd_x(grad_0_B2, B2, hx, sz, R, u1d, du1d, bflag);
-        cfd_y(grad_1_B2, B2, hy, sz, R, u1d, du1d, bflag);
-        cfd_z(grad_2_B2, B2, hz, sz, R, u1d, du1d, bflag);
-    }
-    else
-    {
+        cfd.cfd_x(grad_0_B2, B2, hx, sz, bflag);
+        cfd.cfd_y(grad_1_B2, B2, hy, sz, bflag);
+        cfd.cfd_z(grad_2_B2, B2, hz, sz, bflag);
+    } else {
         std::cerr << "Unknown value for EM3_DERIV_TYPE = "
                   << em3::EM3_DERIV_TYPE << std::endl;
     }
@@ -517,16 +491,13 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
     double eta;
 
     // cout << "begin loop" << endl;
-    for (unsigned int k = PW; k < nz - PW; k++)
-    {
+    for (unsigned int k = PW; k < nz - PW; k++) {
         z = pmin[2] + k * hz;
 
-        for (unsigned int j = PW; j < ny - PW; j++)
-        {
+        for (unsigned int j = PW; j < ny - PW; j++) {
             y = pmin[1] + j * hy;
 
-            for (unsigned int i = PW; i < nx - PW; i++)
-            {
+            for (unsigned int i = PW; i < nx - PW; i++) {
                 x = pmin[0] + i * hx;
                 pp = i + nx * (j + ny * k);
                 // r= sqrt(x*x + y*y + z*z);
@@ -538,8 +509,7 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
         }
     }
 
-    if (bflag != 0)
-    {
+    if (bflag != 0) {
         em3::timer::t_bdyc.start();
 
         em3_bcs(E_rhs0, E0, grad_0_E0, grad_1_E0, grad_2_E0, pmin, pmax, 2.0,
@@ -560,30 +530,6 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
     }
 
     em3::timer::t_deriv.start();
-
-    __mem_pool->free(grad_0_E0);
-    __mem_pool->free(grad_1_E0);
-    __mem_pool->free(grad_2_E0);
-
-    __mem_pool->free(grad_0_E1);
-    __mem_pool->free(grad_1_E1);
-    __mem_pool->free(grad_2_E1);
-
-    __mem_pool->free(grad_0_E2);
-    __mem_pool->free(grad_1_E2);
-    __mem_pool->free(grad_2_E2);
-
-    __mem_pool->free(grad_0_B0);
-    __mem_pool->free(grad_1_B0);
-    __mem_pool->free(grad_2_B0);
-
-    __mem_pool->free(grad_0_B1);
-    __mem_pool->free(grad_1_B1);
-    __mem_pool->free(grad_2_B1);
-
-    __mem_pool->free(grad_0_B2);
-    __mem_pool->free(grad_1_B2);
-    __mem_pool->free(grad_2_B2);
 
     __mem_pool->free(J0);
     __mem_pool->free(J1);

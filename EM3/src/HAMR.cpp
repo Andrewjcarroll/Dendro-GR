@@ -2,10 +2,9 @@
 
 using namespace std;
 
-void HAMRDeriv4_dP(double *P, int n)
-{
-    //Define the variables
-     double a00 = 1.0;
+void HAMRDeriv4_dP(double *P, int n) {
+    // Define the variables
+    double a00 = 1.0;
     double a10 = 0.1023343303;
     double a20 = 0.0347468867;
 
@@ -27,10 +26,11 @@ void HAMRDeriv4_dP(double *P, int n)
 
     double alpha = 0.5747612151;
     double beta1 = 0.0879324249;
-        // Set the diagonal values of the array
+    // Set the diagonal values of the array
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
-            int index = i * n + j; // Calculate the 1D index for the (i, j) element
+            int index =
+                i * n + j;  // Calculate the 1D index for the (i, j) element
             if (i == j) {
                 // Main diagonal
                 P[index] = 1.0;
@@ -73,9 +73,8 @@ void HAMRDeriv4_dP(double *P, int n)
     P[(n - 1) * n + (n - 2)] = a01;
 }
 
-void HAMRDeriv4_dQ(double *Q, int n)
-{
-        //Seting the constants
+void HAMRDeriv4_dQ(double *Q, int n) {
+    // Seting the constants
     double a = 1.3069171114;
     double b = 0.9828406281;
     double c = 0.0356295405;
@@ -110,11 +109,11 @@ void HAMRDeriv4_dQ(double *Q, int n)
     double p11 = -(p10 + p12 + p13 + p14 + p15 + p16);
     double p22 = -(p20 + p21 + p23 + p24 + p25 + p26);
 
-
     // Set the diagonal values of the array
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
-            int index = i * n + j; // Calculate the 1D index for the (i, j) element
+            int index =
+                i * n + j;  // Calculate the 1D index for the (i, j) element
             if (i == j) {
                 // Main diagonal
                 Q[index] = 0.0;
@@ -173,7 +172,7 @@ void HAMRDeriv4_dQ(double *Q, int n)
     Q[(n - 3) * n + (n - 4)] = -p23;
     Q[(n - 3) * n + (n - 3)] = -p22;
     Q[(n - 3) * n + (n - 2)] = -p21;
-     Q[(n - 3) * n + (n - 1)] = -p20;
+    Q[(n - 3) * n + (n - 1)] = -p20;
 
     Q[(n - 2) * n + (n - 7)] = -p16;
     Q[(n - 2) * n + (n - 6)] = -p15;
@@ -192,12 +191,10 @@ void HAMRDeriv4_dQ(double *Q, int n)
     Q[(n - 1) * n + (n - 1)] = -p00;
 }
 
-bool initHAMRDeriv4(double *R, const unsigned int n)
-{
-
-    double *P = new double[n*n];
-    double *Q = new double[n*n];
-    HAMRDeriv4_dP(P, n); // define the matrix P using the function provided
+bool initHAMRDeriv4(double *R, const unsigned int n) {
+    double *P = new double[n * n];
+    double *Q = new double[n * n];
+    HAMRDeriv4_dP(P, n);  // define the matrix P using the function provided
 
     // Define the matrix Q
     HAMRDeriv4_dQ(Q, n);
@@ -205,11 +202,10 @@ bool initHAMRDeriv4(double *R, const unsigned int n)
     // Compute the LU decomposition of the matrix P
     int *ipiv = new int[n];
     int info;
-    int nx = n; // lapack needs fortran-compatible ints, not const unsigned
+    int nx = n;  // lapack needs fortran-compatible ints, not const unsigned
     dgetrf_(&nx, &nx, P, &nx, ipiv, &info);
 
-    if (info != 0)
-    {
+    if (info != 0) {
         std::cerr << "LU factorization failed: " << info << std::endl;
         delete[] ipiv;
         return 1;
@@ -222,8 +218,7 @@ bool initHAMRDeriv4(double *R, const unsigned int n)
     double *work = new double[lwork];
     dgetri_(&nx, Pinv, &nx, ipiv, work, &lwork, &info);
 
-    if (info != 0)
-    {
+    if (info != 0) {
         std::cerr << "Matrix inversion failed: " << info << std::endl;
         delete[] ipiv;
         delete[] Pinv;
@@ -232,13 +227,10 @@ bool initHAMRDeriv4(double *R, const unsigned int n)
     }
 
     // Compute the product of the inverted matrix Pinv and matrix Q
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < n; j++)
-        {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
             R[i * n + j] = 0.0;
-            for (int k = 0; k < n; k++)
-            {
+            for (int k = 0; k < n; k++) {
                 R[i * n + j] += Pinv[i * n + k] * Q[k * n + j];
             }
         }

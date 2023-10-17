@@ -150,7 +150,10 @@ namespace em3
 
    unsigned int getOctantWeight(const ot::TreeNode* pNode);
 
+void allocate_em3_deriv_workspace(const ot::Mesh* pMesh,
+                                      unsigned int s_fac);
 
+void deallocate_em3_deriv_workspace();                         
 
 
 }// end of namespace em3

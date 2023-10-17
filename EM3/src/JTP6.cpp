@@ -2,8 +2,7 @@
 
 using namespace std;
 
-void JTPDeriv6_dP(double *P, int n)
- {
+void JTPDeriv6_dP(double *P, int n) {
     double alpha = 17.0 / 57.0;
     double beta = -1.0 / 114.0;
 
@@ -11,7 +10,7 @@ void JTPDeriv6_dP(double *P, int n)
     for (int i = 0; i < n * n; i++) {
         P[i] = 0.0;
     }
-  for (int i = 0; i < n; i++) {
+    for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
             if (i == j) {
                 // Main diagonal
@@ -71,12 +70,10 @@ void JTPDeriv6_dQ(double *Q, int n) {
         Q[i * n + (i + 1)] = t1;
     }
 }
-bool initJTPDeriv6(double *R, const unsigned int n)
-{
-
-    double *P = new double[n*n];
-    double *Q = new double[n*n];
-    JTPDeriv6_dP(P, n); // define the matrix P using the function provided
+bool initJTPDeriv6(double *R, const unsigned int n) {
+    double *P = new double[n * n];
+    double *Q = new double[n * n];
+    JTPDeriv6_dP(P, n);  // define the matrix P using the function provided
 
     // Define the matrix Q
     JTPDeriv6_dQ(Q, n);
@@ -84,11 +81,10 @@ bool initJTPDeriv6(double *R, const unsigned int n)
     // Compute the LU decomposition of the matrix P
     int *ipiv = new int[n];
     int info;
-    int nx = n; // lapack needs fortran-compatible ints, not const unsigned
+    int nx = n;  // lapack needs fortran-compatible ints, not const unsigned
     dgetrf_(&nx, &nx, P, &nx, ipiv, &info);
 
-    if (info != 0)
-    {
+    if (info != 0) {
         std::cerr << "LU factorization failed: " << info << std::endl;
         delete[] ipiv;
         return 1;
@@ -101,8 +97,7 @@ bool initJTPDeriv6(double *R, const unsigned int n)
     double *work = new double[lwork];
     dgetri_(&nx, Pinv, &nx, ipiv, work, &lwork, &info);
 
-    if (info != 0)
-    {
+    if (info != 0) {
         std::cerr << "Matrix inversion failed: " << info << std::endl;
         delete[] ipiv;
         delete[] Pinv;
@@ -111,13 +106,10 @@ bool initJTPDeriv6(double *R, const unsigned int n)
     }
 
     // Compute the product of the inverted matrix Pinv and matrix Q
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < n; j++)
-        {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
             R[i * n + j] = 0.0;
-            for (int k = 0; k < n; k++)
-            {
+            for (int k = 0; k < n; k++) {
                 R[i * n + j] += Pinv[i * n + k] * Q[k * n + j];
             }
         }
@@ -131,4 +123,3 @@ bool initJTPDeriv6(double *R, const unsigned int n)
 
     return 0;
 }
-

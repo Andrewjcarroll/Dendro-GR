@@ -8,6 +8,7 @@
 #include "parameters.h"
 #include "profile_params.h"
 #include "mathUtils.h"
+#include "cfd.h"
 
 #ifdef EM3_ENABLE_CUDA
 #include "rhs_cuda.cuh"
