@@ -18,7 +18,8 @@ CompactFiniteDiff::CompactFiniteDiff(const unsigned int num_dim,
     if (deriv_type != CFD_NONE && deriv_type != CFD_P1_O4 &&
         deriv_type != CFD_P1_O6 && deriv_type != CFD_Q1_O6_ETA1 &&
         deriv_type != CFD_KIM_O4 && deriv_type != CFD_HAMR_O4 &&
-        deriv_type != CFD_JT_O6 && deriv_type != EXPLCT_FD_O4 && deriv_type != EXPLCT_FD_O6 && deriv_type != EXPLCT_FD_O8) {
+        deriv_type != CFD_JT_O6 && deriv_type != EXPLCT_FD_O4 &&
+        deriv_type != EXPLCT_FD_O6 && deriv_type != EXPLCT_FD_O8) {
         throw std::invalid_argument(
             "Couldn't initialize CFD object, deriv type was not a valid 'base' "
             "type: deriv_type = " +
@@ -135,6 +136,7 @@ void CompactFiniteDiff::initialize_cfd_matrix() {
                            ? true
                            : false;
 
+        std::cout << "left/right b" << left_b << " " << right_b << std::endl;
         // check for explicit filters
         if (m_deriv_type == EXPLCT_FD_O4 || m_deriv_type == EXPLCT_FD_O6 ||
             m_deriv_type == EXPLCT_FD_O8) {
@@ -173,6 +175,8 @@ void CompactFiniteDiff::initialize_cfd_matrix() {
                                        m_second_deriv_type, left_b, right_b);
         } else if (ii == DERIV_2ND_LEFTRIGHT) {
             // don't bother with second order left right...
+            // FIXME: this is skipped because some of the methods give
+            // impossible matrix inversion
             continue;
         } else {
             throw std::out_of_range(
@@ -437,7 +441,7 @@ void CompactFiniteDiff::cfd_z(double *const Dzu, const double *const u,
     const unsigned int nz = sz[2];
 
     char TRANSA = 'N';
-    char TRANSB = 'N';
+    char TRANSB = 'T';
     int M = nz;
     int K = nz;
     double alpha = 1.0 / dz;
@@ -488,18 +492,18 @@ void CompactFiniteDiff::cfd_z(double *const Dzu, const double *const u,
         }
 
 #else
-        for (unsigned int i = 0; i < nx; i++) {
-            for (unsigned int k = 0; k < nz; k++) {
-                m_u1d[k] = u[INDEX_3D(i, j, k)];
-            }
+        for (unsigned int k = 0; k < nz; k++) {
+            // copy slice of X values over
+            std::copy_n(&u[INDEX_3D(0, j, k)], nx, &m_u2d[INDEX_N2D(0, k, nx)]);
         }
 
-        dgemv_(&TRANSA, &M, &K, &alpha, R_mat_use, &M, m_u1d, &N, &beta, m_du1d,
-               &N);
+        // now we have a transposed matrix to send into dgemm_
+        dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &M, m_u2d, &K,
+               &beta, m_du2d, &M);
 
         for (unsigned int i = 0; i < nx; i++) {
             for (unsigned int k = 0; k < nz; k++) {
-                Dzu[INDEX_3D(i, j, k)] = m_du1d[k];
+                Dzu[INDEX_3D(i, j, k)] = m_du2d[k + i * nz];
             }
         }
 
@@ -562,9 +566,8 @@ void CompactFiniteDiff::cfd_xx(double *const Dxu, const double *const u,
         printf("Uh oh, DERIV_2ND_LEFTRIGHT was reached!");
     }
 
-    // std::cout << "bflag is: " << bflag << " dx: " << dx << " alpha: " << alpha << std::endl;
-    // print_square_mat(R_mat_use, nx);
-    // exit(0);
+    // std::cout << "bflag is: " << bflag << " dx: " << dx << " alpha: " <<
+    // alpha << std::endl; print_square_mat(R_mat_use, nx); exit(0);
 
 #ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
     typedef libxsmm_mmfunction<double> kernel_type;
@@ -662,7 +665,7 @@ void CompactFiniteDiff::cfd_yy(double *const Dyu, const double *const u,
     }
 
 #ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
-// #if 0
+    // #if 0
     typedef libxsmm_mmfunction<double> kernel_type;
     // kernel_type kernel(LIBXSMM_GEMM_FLAGS(TRANSA, TRANSB), M, N, K, alpha,
     // beta);
@@ -673,7 +676,7 @@ void CompactFiniteDiff::cfd_yy(double *const Dyu, const double *const u,
 
     for (unsigned int k = 0; k < nz; k++) {
 #ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
-// #if 0
+        // #if 0
         // thanks to memory layout, we can just... use this as a matrix
         // so we can just grab the "matrix" of ny x nx for this one
 
@@ -785,18 +788,19 @@ void CompactFiniteDiff::cfd_zz(double *const Dzu, const double *const u,
         }
 
 #else
-        for (unsigned int i = 0; i < nx; i++) {
-            for (unsigned int k = 0; k < nz; k++) {
-                m_u1d[k] = u[INDEX_3D(i, j, k)];
-            }
+
+        for (unsigned int k = 0; k < nz; k++) {
+            // copy slice of X values over
+            std::copy_n(&u[INDEX_3D(0, j, k)], nx, &m_u2d[INDEX_N2D(0, k, nx)]);
         }
 
-        dgemv_(&TRANSA, &M, &K, &alpha, R_mat_use, &M, m_u1d, &N, &beta, m_du1d,
-               &N);
+        // now we have a transposed matrix to send into dgemm_
+        dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &M, m_u2d, &K,
+               &beta, m_du2d, &M);
 
         for (unsigned int i = 0; i < nx; i++) {
             for (unsigned int k = 0; k < nz; k++) {
-                Dzu[INDEX_3D(i, j, k)] = m_du1d[k];
+                Dzu[INDEX_3D(i, j, k)] = m_du2d[k + i * nz];
             }
         }
 
@@ -1385,8 +1389,8 @@ void buildPandQMatrices2ndOrder(double *P, double *Q, const uint32_t padding,
         curr_n -= padding;
     }
 
-    // std::cout << "i : " << i_start << " " << i_end << std::endl;
-    // std::cout << "j : " << j_start << " " << j_end << std::endl;
+    std::cout << "i : " << i_start << " " << i_end << std::endl;
+    std::cout << "j : " << j_start << " " << j_end << std::endl;
 
     // NOTE: when at the "edges", we need a temporary array that can be copied
     // over
