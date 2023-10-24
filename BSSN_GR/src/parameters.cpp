@@ -107,6 +107,7 @@ namespace bssn
     double BSSN_RK45_TIME_STEP_SIZE=BSSN_CFL_FACTOR*(BSSN_COMPD_MAX[0]-BSSN_COMPD_MIN[0])*(1.0/(double)(1u<<BSSN_MAXDEPTH));
 
     unsigned int BSSN_LAMBDA[4]={1, 1, 1, 1};
+    double BSSN_A_LAMBDA[3] = { 0,2,0};
     double BSSN_LAMBDA_F[2]={1.0, 0.0};
     double BSSN_TRK0=0.0;
     double ETA_CONST=2.0;

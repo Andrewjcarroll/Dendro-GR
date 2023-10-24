@@ -89,6 +89,9 @@ namespace bssn
             bssn::BSSN_LAMBDA[1]=(unsigned int) parFile["BSSN_LAMBDA"]["BSSN_LAMBDA_2"];
             bssn::BSSN_LAMBDA[2]=(unsigned int) parFile["BSSN_LAMBDA"]["BSSN_LAMBDA_3"];
             bssn::BSSN_LAMBDA[3]=(unsigned int) parFile["BSSN_LAMBDA"]["BSSN_LAMBDA_4"];
+            bssn::BSSN_A_LAMBDA[0]=(unsigned int) parFile["BSSN_A_LAMBDA"]["BSSN_A_LAMBDA_0"];           
+            bssn::BSSN_A_LAMBDA[1]=(unsigned int) parFile["BSSN_A_LAMBDA"]["BSSN_A_LAMBDA_1"];
+            bssn::BSSN_A_LAMBDA[2]=(unsigned int) parFile["BSSN_A_LAMBDA"]["BSSN_A_LAMBDA_2"];
             bssn::BSSN_LAMBDA_F[0]=parFile["BSSN_LAMBDA_F"]["BSSN_LAMBDA_F0"];
             bssn::BSSN_LAMBDA_F[1]=parFile["BSSN_LAMBDA_F"]["BSSN_LAMBDA_F1"];
 
@@ -420,6 +423,7 @@ namespace bssn
         par::Mpi_Bcast(&BSSN_ETA_R0,1,0,comm);
 
         MPI_Bcast(&(bssn::BSSN_LAMBDA),4,MPI_UNSIGNED,0,comm);
+        MPI_Bcast(&(bssn::BSSN_A_LAMBDA),3,MPI_DOUBLE,0,comm);
         MPI_Bcast(&(bssn::BSSN_LAMBDA_F),2,MPI_DOUBLE,0,comm);
         MPI_Bcast(&(bssn::BSSN_ETA_POWER),2,MPI_DOUBLE,0,comm);
         MPI_Bcast((bssn::BSSN_XI),3,MPI_INT,0,comm);
@@ -547,6 +551,7 @@ namespace bssn
             sout<<YLW<<"\tRIT_ETA_WIDTH: "<<bssn::RIT_ETA_WIDTH<<NRM<<std::endl;
             sout<<YLW<<"\tRIT_ETA_OUTER: "<<bssn::RIT_ETA_OUTER<<NRM<<std::endl;
             sout<<YLW<<"\tBSSN_LAMBDA : ("<<bssn::BSSN_LAMBDA[0]<<" ,"<<bssn::BSSN_LAMBDA[1]<<","<<bssn::BSSN_LAMBDA[2]<<bssn::BSSN_LAMBDA[3]<<" )"<<NRM<<std::endl;
+            sout<<YLW<<"\tBSSN_A_LAMBDA : ("<<bssn::BSSN_A_LAMBDA[0]<<" ,"<<bssn::BSSN_A_LAMBDA[1]<<" ,"<<bssn::BSSN_A_LAMBDA[2]<< ")"<<NRM<<std::endl;
             sout<<YLW<<"\tBSSN_LAMBDA_F : ("<<bssn::BSSN_LAMBDA_F[0]<<" ,"<<bssn::BSSN_LAMBDA_F[1]<<" )"<<NRM<<std::endl;
             sout<<YLW<<"\tBSSN_XI : ("<<bssn::BSSN_XI[0]<<" ,"<<bssn::BSSN_XI[1]<<" ,"<<bssn::BSSN_XI[2]<<" )"<<NRM<<std::endl;
             sout<<YLW<<"\tCHI_FLOOR :"<<bssn::CHI_FLOOR<<NRM<<std::endl;

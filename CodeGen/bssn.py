@@ -11,7 +11,7 @@ from sympy import *
 
 l1, l2, l3, l4, eta = symbols('lambda[0] lambda[1] lambda[2] lambda[3] eta')
 lf0, lf1 = symbols('lambda_f[0] lambda_f[1]')
-al0, al1, al2, al3 = symbols('A_lambda[0] A_lambda[1] A_lambda[2] A_lambda[3]')
+al0, al1, al2 = symbols('A_lambda[0] A_lambda[1] A_lambda[2]')
 
 # Additional parameters for damping term
 R0 = symbols('BSSN_ETA_R0')
@@ -71,7 +71,7 @@ def bssn_puncture_gauge(eta_damp , isStaged=False , prefix=""):
         C2_spatial = dendro.get_complete_christoffel(chi)
         [R, Rt, Rphi, CalGt] = dendro.compute_ricci(Gt, chi)
         
-        a_rhs = l1*dendro.lie(b, a) - (a**2)*(al0+al1/a+al2/(a**2)+al3/(a**3))*K 
+        a_rhs = l1*dendro.lie(b, a) - (al0*a**2+al1*a+al2)*K 
         
         b_rhs = [(Rational(3,4) * (lf0 + lf1*a) * B[i] + l2 * dendro.vec_j_ad_j(b, b[i])) for i in dendro.e_i ] 
             
