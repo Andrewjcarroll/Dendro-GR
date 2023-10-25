@@ -89,9 +89,9 @@ namespace bssn
             bssn::BSSN_LAMBDA[1]=(unsigned int) parFile["BSSN_LAMBDA"]["BSSN_LAMBDA_2"];
             bssn::BSSN_LAMBDA[2]=(unsigned int) parFile["BSSN_LAMBDA"]["BSSN_LAMBDA_3"];
             bssn::BSSN_LAMBDA[3]=(unsigned int) parFile["BSSN_LAMBDA"]["BSSN_LAMBDA_4"];
-            bssn::BSSN_A_LAMBDA[0]=(unsigned int) parFile["BSSN_A_LAMBDA"]["BSSN_A_LAMBDA_0"];           
-            bssn::BSSN_A_LAMBDA[1]=(unsigned int) parFile["BSSN_A_LAMBDA"]["BSSN_A_LAMBDA_1"];
-            bssn::BSSN_A_LAMBDA[2]=(unsigned int) parFile["BSSN_A_LAMBDA"]["BSSN_A_LAMBDA_2"];
+            bssn::BSSN_A_LAMBDA[0]= parFile["BSSN_A_LAMBDA"]["BSSN_A_LAMBDA_0"];           
+            bssn::BSSN_A_LAMBDA[1]= parFile["BSSN_A_LAMBDA"]["BSSN_A_LAMBDA_1"];
+            bssn::BSSN_A_LAMBDA[2]= parFile["BSSN_A_LAMBDA"]["BSSN_A_LAMBDA_2"];
             bssn::BSSN_LAMBDA_F[0]=parFile["BSSN_LAMBDA_F"]["BSSN_LAMBDA_F0"];
             bssn::BSSN_LAMBDA_F[1]=parFile["BSSN_LAMBDA_F"]["BSSN_LAMBDA_F1"];
 
