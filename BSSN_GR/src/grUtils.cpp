@@ -1045,7 +1045,7 @@ namespace bssn
 
         var[VAR::U_ALPHA] = 1.0/(vpsibl_u*vpsibl_u);
         //std::cout<<"Alpha: "<<u[U_ALPHA]<<" vpsibl_u: "<< vpsibl_u<<std::endl;
-        var[VAR::U_ALPHA] = std::max(var[VAR::U_ALPHA], CHI_FLOOR);
+        //var[VAR::U_ALPHA] = std::max(var[VAR::U_ALPHA], CHI_FLOOR);
 
         v2 = 1.0/pow(vpsibl_u,4);
         var[VAR::U_CHI] = v2;
