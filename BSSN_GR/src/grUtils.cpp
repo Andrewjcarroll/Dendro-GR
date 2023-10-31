@@ -2123,8 +2123,7 @@ namespace bssn
                 if(r < bssn::TEUK_R_0)
                     return bssn::BSSN_WAVELET_TOL;
                 else{
-                    const double GW_TOL = bssn::BSSN_GW_REFINE_WTOL;
-                    const double W_RR = std::min(GW_TOL,bssn::BSSN_WAVELET_TOL_MAX);
+                    const double W_RR = bssn::BSSN_WAVELET_TOL_MAX;
                     double WTOL_EXP_FAC =(r-bssn::TEUK_R_0)/std::log10(W_RR/bssn::BSSN_WAVELET_TOL);
                     return std::min(bssn::BSSN_WAVELET_TOL_MAX, ((std::pow(10,(r-bssn::TEUK_R_0)/WTOL_EXP_FAC)) * bssn::BSSN_WAVELET_TOL) );     
 
