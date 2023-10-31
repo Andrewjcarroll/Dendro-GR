@@ -2120,8 +2120,7 @@ namespace bssn
         else if (bssn::BSSN_USE_WAVELET_TOL_FUNCTION == 6) {
             const double r  = sqrt(x*x + y*y + z*z);
             Point grid_p(x,y,z);
-            //double offset= 10;
-                if(r < bssn::TEUK_R_0+5.0)
+                if(r < bssn::TEUK_R_0)
                     return bssn::BSSN_WAVELET_TOL;
                 else{
                     const double GW_TOL = bssn::BSSN_GW_REFINE_WTOL;
