@@ -2120,6 +2120,7 @@ namespace bssn
         else if (bssn::BSSN_USE_WAVELET_TOL_FUNCTION == 6) {
             const double r  = sqrt(x*x + y*y + z*z);
             Point grid_p(x,y,z);
+
                 if(r < bssn::TEUK_R_0)
                     return bssn::BSSN_WAVELET_TOL;
                 else{
@@ -2128,7 +2129,37 @@ namespace bssn
                     return std::min(bssn::BSSN_WAVELET_TOL_MAX, ((std::pow(10,(r-bssn::TEUK_R_0)/WTOL_EXP_FAC)) * bssn::BSSN_WAVELET_TOL) );     
 
             }
-            } else {
+            } 
+            else if (bssn::BSSN_USE_WAVELET_TOL_FUNCTION == 7) {
+            const double r  = sqrt(x*x + y*y + z*z);
+            Point grid_p(x,y,z);
+            const double T_CURRENT = bssn::BSSN_CURRENT_RK_COORD_TIME;
+            if(T_CURRENT + bssn::TEUK_WIDTH < bssn::TEUK_R_0){
+                if (bssn::TEUK_R_0 -bssn::TEUK_WIDTH){
+                    const double W_RR = bssn::BSSN_WAVELET_TOL_MAX;
+                    double WTOL_EXP_FAC =(r-bssn::TEUK_R_0)/std::log10(W_RR/bssn::BSSN_WAVELET_TOL);
+                    return std::min(bssn::BSSN_WAVELET_TOL_MAX, ((std::pow(10,(std::abs(bssn::TEUK_R_0-r))/WTOL_EXP_FAC)) * bssn::BSSN_WAVELET_TOL) ); 
+                }
+                if (bssn::TEUK_R_0 - bssn::TEUK_WIDTH - T_CURRENT < r && r < TEUK_R_0 + bssn::TEUK_WIDTH-T_CURRENT)
+                    return bssn::BSSN_WAVELET_TOL;
+                else{
+                    const double W_RR = bssn::BSSN_WAVELET_TOL_MAX;
+                    double WTOL_EXP_FAC =(r-bssn::TEUK_R_0)/std::log10(W_RR/bssn::BSSN_WAVELET_TOL);
+                    return std::min(bssn::BSSN_WAVELET_TOL_MAX, ((std::pow(10,(std::abs(r-bssn::TEUK_R_0))/WTOL_EXP_FAC)) * bssn::BSSN_WAVELET_TOL) );     
+                }
+            }
+            else {
+                if( r < bssn::TEUK_R_0/2)
+                    return bssn::BSSN_WAVELET_TOL;
+                else{
+                    const double W_RR = bssn::BSSN_WAVELET_TOL_MAX;
+                    double WTOL_EXP_FAC =(r-bssn::TEUK_R_0/2)/std::log10(W_RR/bssn::BSSN_WAVELET_TOL);
+                    return std::min(bssn::BSSN_WAVELET_TOL_MAX, ((std::pow(10,(std::abs(r-bssn::TEUK_R_0/2))/WTOL_EXP_FAC)) * bssn::BSSN_WAVELET_TOL) );     
+                }
+            }
+            }
+        
+            else {
             return bssn::BSSN_WAVELET_TOL;
         }
         }
