@@ -2134,7 +2134,7 @@ namespace bssn
             const double r  = sqrt(x*x + y*y + z*z);
             Point grid_p(x,y,z);
             const double T_CURRENT = bssn::BSSN_CURRENT_RK_COORD_TIME;
-            if(T_CURRENT + bssn::TEUK_WIDTH < bssn::TEUK_R_0){
+            if(T_CURRENT - bssn::TEUK_WIDTH < bssn::TEUK_R_0){
                 if (bssn::TEUK_R_0 -bssn::TEUK_WIDTH){
                     const double W_RR = bssn::BSSN_WAVELET_TOL_MAX;
                     double WTOL_EXP_FAC =(r-bssn::TEUK_R_0)/std::log10(W_RR/bssn::BSSN_WAVELET_TOL);
