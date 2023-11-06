@@ -367,6 +367,8 @@ namespace bssn
     // compact support.
     extern unsigned int TEUK_KK;
 
+    extern double TEUK_REFINEMENT_R0;
+
     // note ko derivs are not included
     #ifdef BSSN_USE_ADVECTIVE_DERIVS
         const unsigned int BSSN_NUM_DERIVS= 138 + 74;

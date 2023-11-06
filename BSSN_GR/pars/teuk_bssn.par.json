@@ -130,6 +130,7 @@
                 "BSSN_LAMBDA_3": 1,
                 "BSSN_LAMBDA_4": 1
                 },
+                
                 "BSSN_A_LAMBDA" :{
                 "BSSN_A_LAMBDA_0" :0,
                 "BSSN_A_LAMBDA_1" :2,
@@ -294,6 +295,7 @@
         "TEUK_WIDTH": 2.0,
         "TEUK_R_0": 20.0,
         "TEUK_KK": 6,
+        "TEUK_REFINEMENT_RO": 2.0,
 
         "__comment__" : "========================================================"
     

@@ -108,6 +108,7 @@ namespace bssn
             bssn::TEUK_ID_FUNCTIONAL_FORM=parFile["TEUK_ID_FUNCTIONAL_FORM"];
             bssn::TEUK_KK=parFile["TEUK_KK"];
             bssn::TEUK_R_0=parFile["TEUK_R_0"];
+            bssn::TEUK_REFINEMENT_R0=parFile["TEUK_REFINEMENT_R0"];
             
             if(parFile.find("BSSN_ELE_ORDER")!= parFile.end())
                 bssn::BSSN_ELE_ORDER = parFile["BSSN_ELE_ORDER"];
@@ -312,6 +313,7 @@ namespace bssn
         par::Mpi_Bcast(&TEUK_WIDTH,1,0,comm);
         par::Mpi_Bcast(&TEUK_R_0,1,0,comm);
         par::Mpi_Bcast(&TEUK_KK,1,0,comm);
+        par::Mpi_Bcast(&TEUK_REFINEMENT_R0,1,0,comm);
 
         char vtu_name[vtu_len+1];
         char chp_name[chp_len+1];
@@ -707,6 +709,7 @@ namespace bssn
                 sout << "\tHalf Width: " << TEUK_WIDTH << std::endl;
                 sout << "\tl mode: " << TEUK_L_MODE << std::endl;
                 sout << "\tm mode: " << TEUK_M_MODE << std::endl;
+                sout << "\tRefinement_R0: " << TEUK_REFINEMENT_R0 << std::endl;
 
                 sout << "\n////////////////////////////////////////////////////"
                         "///\n"
@@ -2119,7 +2122,7 @@ namespace bssn
         } else if (bssn::BSSN_USE_WAVELET_TOL_FUNCTION == 6) {
 		    const double r  = sqrt(x*x + y*y + z*z);
 		    Point grid_p(x,y,z);
-            double R_0= bssn::TEUK_R_0+bssn::TEUK_WIDTH;
+            double R_0= TEUK_REFINEMENT_R0;
 		    if(r < R_0)
             	return bssn::BSSN_WAVELET_TOL;
 		    else{

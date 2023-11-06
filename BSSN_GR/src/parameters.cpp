@@ -155,6 +155,7 @@ namespace bssn
     double TEUK_WIDTH; 
     double TEUK_R_0;
     unsigned int TEUK_KK;
+    double TEUK_REFINEMENT_R0;
 
     // by default use WAMR refinement. 
     RefinementMode BSSN_REFINEMENT_MODE = RefinementMode::WAMR;
