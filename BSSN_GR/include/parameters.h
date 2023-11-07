@@ -272,6 +272,9 @@ namespace bssn
     /**@brief: chi floor value */
     extern double CHI_FLOOR;
 
+    /**@brief: ALPHA floor value */
+    extern double ALPHA_FLOOR;
+
     /**@brief: dissipation type */
     extern unsigned int DISSIPATION_TYPE;
 

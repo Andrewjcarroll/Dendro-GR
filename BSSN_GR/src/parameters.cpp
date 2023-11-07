@@ -115,6 +115,7 @@ namespace bssn
     double ETA_DAMPING=1.0;
     double ETA_DAMPING_EXP=1.0;
     double CHI_FLOOR=0.1;
+    double ALPHA_FLOOR=1e-6;
     double KO_DISS_SIGMA=0.01;
 
     unsigned int RIT_ETA_FUNCTION = 1;

@@ -114,6 +114,7 @@ namespace bssn
                 bssn::BSSN_ELE_ORDER = parFile["BSSN_ELE_ORDER"];
             
             bssn::CHI_FLOOR=parFile["CHI_FLOOR"];
+            bssn::ALPHA_FLOOR=parFile["ALPHA_FLOOR"];
             bssn::BSSN_TRK0=parFile["BSSN_TRK0"];
             if (parFile.find("DISSIPATION_TYPE") != parFile.end()) {
                 bssn::DISSIPATION_TYPE=parFile["DISSIPATION_TYPE"];
@@ -419,6 +420,7 @@ namespace bssn
         par::Mpi_Bcast(&RIT_ETA_WIDTH,1,0,comm);
 
         par::Mpi_Bcast(&CHI_FLOOR,1,0,comm);
+        par::Mpi_Bcast(&ALPHA_FLOOR,1,0,comm);
         par::Mpi_Bcast(&BSSN_TRK0,1,0,comm);
         par::Mpi_Bcast(&DISSIPATION_TYPE,1,0,comm);
         par::Mpi_Bcast(&KO_DISS_SIGMA,1,0,comm);
@@ -557,6 +559,7 @@ namespace bssn
             sout<<YLW<<"\tBSSN_LAMBDA_F : ("<<bssn::BSSN_LAMBDA_F[0]<<" ,"<<bssn::BSSN_LAMBDA_F[1]<<" )"<<NRM<<std::endl;
             sout<<YLW<<"\tBSSN_XI : ("<<bssn::BSSN_XI[0]<<" ,"<<bssn::BSSN_XI[1]<<" ,"<<bssn::BSSN_XI[2]<<" )"<<NRM<<std::endl;
             sout<<YLW<<"\tCHI_FLOOR :"<<bssn::CHI_FLOOR<<NRM<<std::endl;
+            sout<<YLW<<"\tALPHA_FLOOR :"<<bssn::ALPHA_FLOOR<<NRM<<std::endl;
             sout<<YLW<<"\tBSSN_TRK0 :"<<bssn::BSSN_TRK0<<NRM<<std::endl;
             sout<<YLW<<"\tDISSIPATION_TYPE :"<<bssn::DISSIPATION_TYPE<<NRM<<std::endl;
             sout<<YLW<<"\tKO_DISS_SIGMA :"<<bssn::KO_DISS_SIGMA<<NRM<<std::endl;
@@ -1048,7 +1051,7 @@ namespace bssn
 
         var[VAR::U_ALPHA] = 1.0/(vpsibl_u*vpsibl_u);
         //std::cout<<"Alpha: "<<u[U_ALPHA]<<" vpsibl_u: "<< vpsibl_u<<std::endl;
-        //var[VAR::U_ALPHA] = std::max(var[VAR::U_ALPHA], CHI_FLOOR);
+        var[VAR::U_ALPHA] = std::max(var[VAR::U_ALPHA], ALPHA_FLOOR);
 
         v2 = 1.0/pow(vpsibl_u,4);
         var[VAR::U_CHI] = v2;

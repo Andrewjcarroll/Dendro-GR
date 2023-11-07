@@ -169,6 +169,6 @@ inline void enforce_bssn_constraints(double **uiVar, unsigned int node)
     }
 
     /* apply a floor to alpha */
-    //uiVar[VAR::U_ALPHA][node] = std::max(uiVar[VAR::U_ALPHA][node], CHI_FLOOR);
+    uiVar[VAR::U_ALPHA][node] = std::max(uiVar[VAR::U_ALPHA][node], ALPHA_FLOOR);
 }
 
