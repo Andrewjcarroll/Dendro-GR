@@ -1,6 +1,7 @@
 #include "compact_derivs.h"
 
 #include <cstdint>
+#include <stdexcept>
 
 // #define FASTER_DERIV_CALC_VIA_MATRIX_MULT
 #define PRINT_COMPACT_MATRICES
@@ -226,7 +227,8 @@ void CompactFiniteDiff::initialize_cfd_filter() {
             (ii == FILT_RIGHT || ii == FILT_LEFTRIGHT) ? true : false;
 
         buildPandQFilterMatrices(P, Q, m_padding_size, m_curr_dim_size,
-                                 m_filter_type, left_b, right_b);
+                                 m_filter_type, m_filt_alpha,
+                                 m_filt_bound_enable, left_b, right_b);
 
 #ifdef PRINT_COMPACT_MATRICES
         std::cout << "\nP MATRIX no=" << ii << std::endl;
@@ -1135,8 +1137,8 @@ DerType2nd get2ndDerTypeForEdges(const DerType2nd derivtype,
     switch (boundary) {
         case BLOCK_CFD_DIRICHLET:
         case BLOCK_PHYS_BOUNDARY:
-            return doptions[2];
-            // return doptions[1];
+            // return doptions[2];
+            return doptions[1];
         case BLOCK_CFD_CLOSURE:
             return doptions[2];
         case BLOCK_CFD_LOPSIDE_CLOSURE:
@@ -1562,6 +1564,7 @@ void buildPandQMatrices2ndOrder(double *P, double *Q, const uint32_t padding,
 
 void buildPandQFilterMatrices(double *P, double *Q, const uint32_t padding,
                               const uint32_t n, const FilterType filtertype,
+                              const double alpha, const bool bound_enable,
                               const bool is_left_edge,
                               const bool is_right_edge) {
     // NOTE: we're pretending that all of the "mpi" or "block" boundaries
@@ -1623,11 +1626,15 @@ void buildPandQFilterMatrices(double *P, double *Q, const uint32_t padding,
 
         initializeKim6FilterPQ(tempP, tempQ, curr_n);
     } else if (filtertype == FILT_JT_6) {
+        initializeJTFilterT6PQ(tempP, tempQ, curr_n, padding, alpha,
+                               bound_enable, is_left_edge, is_right_edge);
         // TODO: NOT CURRENTLY IMPLEMENTED
         std::cerr << "WARNING: The JT 6 filter is not yet ready! This will "
                      "lead to unexpected results!"
                   << std::endl;
     } else if (filtertype == FILT_JT_8) {
+        initializeJTFilterT8PQ(tempP, tempQ, curr_n, padding, alpha,
+                               bound_enable, is_left_edge, is_right_edge);
         // TODO: NOT CURRENTLY IMPLEMENTED
         std::cerr << "WARNING: The JT 8 filter is not yet ready! This will "
                      "lead to unexpected results!"
@@ -2876,6 +2883,486 @@ void initializeKim6FilterPQ(double *P, double *Q, int n) {
     Q[INDEX_2D(n - 1, n - 1)] = 0.0;
 }
 
+void initializeJTFilterT6PQ(double *P, double *Q, int n, double alpha,
+                            bool fbound, bool is_left_edge,
+                            bool is_right_edge) {
+    if (n < 7) {
+        throw std::invalid_argument(
+            "Received n=" + std::to_string(n) +
+            " when initializing JTFilterT6. N must be greater than 6!");
+    }
+    // initialize the A matrix corners to 1's
+    P[INDEX_2D(0, 0)] = 1.0;
+    P[INDEX_2D(1, 1)] = 1.0;
+    P[INDEX_2D(2, 2)] = 1.0;
+
+    P[INDEX_2D(n - 3, n - 3)] = 1.0;
+    P[INDEX_2D(n - 2, n - 2)] = 1.0;
+    P[INDEX_2D(n - 1, n - 1)] = 1.0;
+
+    for (int ii = 3; ii < n - 3; ii++) {
+        P[INDEX_2D(ii, ii - 1)] = alpha;
+        P[INDEX_2D(ii, ii)] = 1.0;
+        P[INDEX_2D(ii, ii + 1)] = alpha;
+    }
+
+    // then we initialize some constants
+
+    /*-----------------------------------------------------
+     * The coefficients for the center are from the following:
+     *   - Jonathan Tyler's thesis at BYU.
+     *   - Liu, Zhang, Zhang, and Chi-Wang Shu,
+     *   - Lele (1992) equation C.2.5 with beta = 0
+     *-----------------------------------------------------*/
+    const double a = (11.0 + 10.0 * alpha) / 16.0;
+    const double b = (15.0 + 34.0 * alpha) / 32.0;
+    const double c = (-3.0 + 6.0 * alpha) / 16.0;
+    const double d = (1.0 - 2.0 * alpha) / 32.0;
+
+    for (int i = 3; i < n - 3; i++) {
+        Q[INDEX_2D(i, i - 3)] = d / 2.0;
+        Q[INDEX_2D(i, i - 2)] = c / 2.0;
+        Q[INDEX_2D(i, i - 1)] = b / 2.0;
+        Q[INDEX_2D(i, i)] = a;
+        Q[INDEX_2D(i, i + 1)] = b / 2.0;
+        Q[INDEX_2D(i, i + 2)] = c / 2.0;
+        Q[INDEX_2D(i, i + 3)] = d / 2.0;
+    }
+
+    if (fbound) {
+        if (is_left_edge) {
+            P[INDEX_2D(0, 1)] = alpha;
+
+            P[INDEX_2D(1, 0)] = alpha;
+            P[INDEX_2D(1, 2)] = alpha;
+
+            P[INDEX_2D(2, 1)] = alpha;
+            P[INDEX_2D(2, 3)] = alpha;
+
+            int ii = 0;
+            Q[INDEX_2D(ii, ii)] = (63.0 + alpha) / 64.0;
+            Q[INDEX_2D(ii, ii + 1)] = (3.0 + 29 * alpha) / 32.0;
+            Q[INDEX_2D(ii, ii + 2)] = 15.0 * (-1 + alpha) / 64.0;
+            Q[INDEX_2D(ii, ii + 3)] = 5.0 * (1 - alpha) / 16.0;
+            Q[INDEX_2D(ii, ii + 4)] = 15.0 * (-1 + alpha) / 64.0;
+            Q[INDEX_2D(ii, ii + 5)] = 3.0 * (1 - alpha) / 32.0;
+            Q[INDEX_2D(ii, ii + 6)] = (-1.0 + alpha) / 64.0;
+
+            ii = 1;
+            Q[INDEX_2D(ii, ii - 1)] = (1 + 62 * alpha) / 64.0;
+            Q[INDEX_2D(ii, ii)] = (29 + 6 * alpha) / 32.0;
+            Q[INDEX_2D(ii, ii + 1)] = (15 + 34 * alpha) / 64.0;
+            Q[INDEX_2D(ii, ii + 2)] = (-5 + 10 * alpha) / 16.0;
+            Q[INDEX_2D(ii, ii + 3)] = 15 * (1 - 2 * alpha) / 64.0;
+            Q[INDEX_2D(ii, ii + 4)] = 3 * (-1 + 2 * alpha) / 32.0;
+            Q[INDEX_2D(ii, ii + 5)] = (1 - 2 * alpha) / 64.0;
+
+            ii = 2;
+            Q[INDEX_2D(ii, ii - 2)] = (-1 + 2 * alpha) / 64.0;
+            Q[INDEX_2D(ii, ii - 1)] = (3 + 26 * alpha) / 32.0;
+            Q[INDEX_2D(ii, ii)] = (49 + 30 * alpha) / 64.0;
+            Q[INDEX_2D(ii, ii + 1)] = (5 + 6 * alpha) / 16.0;
+            Q[INDEX_2D(ii, ii + 2)] = 15 * (-1 + 2 * alpha) / 64.0;
+            Q[INDEX_2D(ii, ii + 3)] = 3 * (1 - 2 * alpha) / 32.0;
+            Q[INDEX_2D(ii, ii + 4)] = (-1 + 2 * alpha) / 64.0;
+        }
+
+        if (is_right_edge) {
+            P[INDEX_2D(n - 3, n - 4)] = alpha;
+            P[INDEX_2D(n - 3, n - 2)] = alpha;
+
+            P[INDEX_2D(n - 2, n - 2)] = alpha;
+            P[INDEX_2D(n - 2, n - 1)] = alpha;
+
+            P[INDEX_2D(n - 1, n - 2)] = alpha;
+
+            int ii = n - 1;
+            Q[INDEX_2D(ii - 2, ii)] = (-1 + 2 * alpha) / 64.0;
+            Q[INDEX_2D(ii - 2, ii - 1)] = (3 + 26 * alpha) / 32.0;
+            Q[INDEX_2D(ii - 2, ii - 2)] = (49 + 30 * alpha) / 64.0;
+            Q[INDEX_2D(ii - 2, ii - 3)] = (5 + 6 * alpha) / 16.0;
+            Q[INDEX_2D(ii - 2, ii - 4)] = 15 * (-1 + 2 * alpha) / 64.0;
+            Q[INDEX_2D(ii - 2, ii - 5)] = 3 * (1 - 2 * alpha) / 32.0;
+            Q[INDEX_2D(ii - 2, ii - 6)] = (-1 + 2 * alpha) / 64.0;
+
+            Q[INDEX_2D(ii - 1, ii)] = (1 + 62 * alpha) / 64.0;
+            Q[INDEX_2D(ii - 1, ii - 1)] = (29 + 6 * alpha) / 32.0;
+            Q[INDEX_2D(ii - 1, ii - 2)] = (15 + 34 * alpha) / 64.0;
+            Q[INDEX_2D(ii - 1, ii - 3)] = (-5 + 10 * alpha) / 16.0;
+            Q[INDEX_2D(ii - 1, ii - 4)] = 15 * (1 - 2 * alpha) / 64.0;
+            Q[INDEX_2D(ii - 1, ii - 5)] = 3 * (-1 + 2 * alpha) / 32.0;
+            Q[INDEX_2D(ii - 1, ii - 6)] = (1 - 2 * alpha) / 64.0;
+
+            Q[INDEX_2D(ii, ii)] = (63 + alpha) / 64.0;
+            Q[INDEX_2D(ii, ii - 1)] = (3 + 29 * alpha) / 32.0;
+            Q[INDEX_2D(ii, ii - 2)] = 15 * (-1 + alpha) / 64.0;
+            Q[INDEX_2D(ii, ii - 3)] = 5 * (1 - alpha) / 16.0;
+            Q[INDEX_2D(ii, ii - 4)] = 15 * (-1 + alpha) / 64.0;
+            Q[INDEX_2D(ii, ii - 5)] = 3 * (1 - alpha) / 32.0;
+            Q[INDEX_2D(ii, ii - 6)] = (-1 + alpha) / 64.0;
+        }
+    }
+}
+
+void initializeJTFilterT8PQ(double *P, double *Q, int n, double alpha,
+                            bool fbound, bool is_left_edge,
+                            bool is_right_edge) {
+    if (n < 9) {
+        throw std::invalid_argument(
+            "Received n=" + std::to_string(n) +
+            " when initializing JTFilterT8. N must be greater than 9!");
+    }
+
+    // initialize the A matrix corners to 1's
+    P[INDEX_2D(0, 0)] = 1.0;
+    P[INDEX_2D(1, 1)] = 1.0;
+    P[INDEX_2D(2, 2)] = 1.0;
+    P[INDEX_2D(3, 3)] = 1.0;
+
+    P[INDEX_2D(n - 4, n - 4)] = 1.0;
+    P[INDEX_2D(n - 3, n - 3)] = 1.0;
+    P[INDEX_2D(n - 2, n - 2)] = 1.0;
+    P[INDEX_2D(n - 1, n - 1)] = 1.0;
+
+    // initialize the tridiagonal!
+    for (int ii = 4; ii < n - 4; ii++) {
+        P[INDEX_2D(ii, ii - 1)] = alpha;
+        P[INDEX_2D(ii, ii)] = 1.0;
+        P[INDEX_2D(ii, ii + 1)] = alpha;
+    }
+
+    const double a = (93 + 70 * alpha) / 128.0;
+    const double b = (7 + 18 * alpha) / 16.0;
+    const double c = (-7 + 14 * alpha) / 32.0;
+    const double d = (1 - 2 * alpha) / 16.0;
+    const double e = (-1 + 2 * alpha) / 128.0;
+
+    for (int i = 4; i < n - 4; i++) {
+        Q[INDEX_2D(i, i - 4)] = e / 2.0;
+        Q[INDEX_2D(i, i - 3)] = d / 2.0;
+        Q[INDEX_2D(i, i - 2)] = c / 2.0;
+        Q[INDEX_2D(i, i - 1)] = b / 2.0;
+        Q[INDEX_2D(i, i)] = a;
+        Q[INDEX_2D(i, i + 1)] = b / 2.0;
+        Q[INDEX_2D(i, i + 2)] = c / 2.0;
+        Q[INDEX_2D(i, i + 3)] = d / 2.0;
+        Q[INDEX_2D(i, i + 4)] = e / 2.0;
+    }
+
+    if (fbound) {
+        if (is_left_edge) {
+            P[INDEX_2D(0, 1)] = alpha;
+            P[INDEX_2D(1, 0)] = alpha;
+            P[INDEX_2D(1, 2)] = alpha;
+            P[INDEX_2D(2, 1)] = alpha;
+            P[INDEX_2D(2, 3)] = alpha;
+            P[INDEX_2D(3, 2)] = alpha;
+            P[INDEX_2D(3, 4)] = alpha;
+
+            Q[INDEX_2D(0, 0)] = (255 + alpha) / 256.0;
+            Q[INDEX_2D(0, 1)] = (1 + 31 * alpha) / 32.0;
+            Q[INDEX_2D(0, 2)] = (-7 + 7 * alpha) / 64.0;
+            Q[INDEX_2D(0, 3)] = (7 - 7 * alpha) / 32.0;
+            Q[INDEX_2D(0, 4)] = 7 * (-5 + 5 * alpha) / 128.0;
+            Q[INDEX_2D(0, 5)] = (7 - 7 * alpha) / 32.0;
+            Q[INDEX_2D(0, 6)] = 7 * (-1 + alpha) / 64.0;
+            Q[INDEX_2D(0, 7)] = (1 - alpha) / 32.0;
+            Q[INDEX_2D(0, 8)] = (-1 + alpha) / 256.0;
+
+            Q[INDEX_2D(2, 0)] = (1 + 254 * alpha) / 256.0;
+            Q[INDEX_2D(2, 1)] = (31 + 2 * alpha) / 32.0;
+            Q[INDEX_2D(2, 2)] = (7 + 50 * alpha) / 64.0;
+            Q[INDEX_2D(2, 3)] = (-7 + 14 * alpha) / 32.0;
+            Q[INDEX_2D(2, 4)] = 7 * (5 - 10 * alpha) / 128.0;
+            Q[INDEX_2D(2, 5)] = (-7 + 14 * alpha) / 32.0;
+            Q[INDEX_2D(2, 6)] = (7 - 14 * alpha) / 64.0;
+            Q[INDEX_2D(2, 7)] = (-1 + 2 * alpha) / 32.0;
+            Q[INDEX_2D(2, 8)] = (1 - 2 * alpha) / 256.0;
+
+            Q[INDEX_2D(3, 0)] = (-1 + 2 * alpha) / 256.0;
+            Q[INDEX_2D(3, 1)] = (1 + 30 * alpha) / 32.0;
+            Q[INDEX_2D(3, 2)] = (57 + 14 * alpha) / 64.0;
+            Q[INDEX_2D(3, 3)] = (7 + 18 * alpha) / 32.0;
+            Q[INDEX_2D(3, 4)] = 7 * (-5 + 10 * alpha) / 128.0;
+            Q[INDEX_2D(3, 5)] = (7 - 14 * alpha) / 32.0;
+            Q[INDEX_2D(3, 6)] = (-7 + 14 * alpha) / 64.0;
+            Q[INDEX_2D(3, 7)] = (1 - 2 * alpha) / 32.0;
+            Q[INDEX_2D(3, 8)] = (-1 + 2 * alpha) / 256.0;
+
+            Q[INDEX_2D(4, 0)] = (1 - 2 * alpha) / 256.0;
+            Q[INDEX_2D(4, 1)] = (-1 + 2 * alpha) / 32.0;
+            Q[INDEX_2D(4, 2)] = (7 + 50 * alpha) / 64.0;
+            Q[INDEX_2D(4, 3)] = (25 + 14 * alpha) / 32.0;
+            Q[INDEX_2D(4, 4)] = (35 + 58 * alpha) / 128.0;
+            Q[INDEX_2D(4, 5)] = (-7 + 14 * alpha) / 32.0;
+            Q[INDEX_2D(4, 6)] = (7 - 14 * alpha) / 64.0;
+            Q[INDEX_2D(4, 7)] = (-1 + 2 * alpha) / 32.0;
+            Q[INDEX_2D(4, 8)] = (1 - 2 * alpha) / 256.0;
+        }
+        if (is_right_edge) {
+            P[INDEX_2D(n - 4, n - 5)] = alpha;
+            P[INDEX_2D(n - 4, n - 3)] = alpha;
+            P[INDEX_2D(n - 3, n - 4)] = alpha;
+            P[INDEX_2D(n - 3, n - 2)] = alpha;
+            P[INDEX_2D(n - 2, n - 3)] = alpha;
+            P[INDEX_2D(n - 2, n - 1)] = alpha;
+            P[INDEX_2D(n - 1, n - 2)] = alpha;
+
+            int ii = n - 1;
+
+            Q[INDEX_2D(ii - 3, ii)] = (1 - 2 * alpha) / 256.0;
+            Q[INDEX_2D(ii - 3, ii - 1)] = (-1 + 2 * alpha) / 32.0;
+            Q[INDEX_2D(ii - 3, ii - 2)] = (7 + 50 * alpha) / 64.0;
+            Q[INDEX_2D(ii - 3, ii - 3)] = (25 + 14 * alpha) / 32.0;
+            Q[INDEX_2D(ii - 3, ii - 4)] = (35 + 58 * alpha) / 128.0;
+            Q[INDEX_2D(ii - 3, ii - 5)] = (-7 + 14 * alpha) / 32.0;
+            Q[INDEX_2D(ii - 3, ii - 6)] = (7 - 14 * alpha) / 64.0;
+            Q[INDEX_2D(ii - 3, ii - 7)] = (-1 + 2 * alpha) / 32.0;
+            Q[INDEX_2D(ii - 3, ii - 8)] = (1 - 2 * alpha) / 256.0;
+
+            Q[INDEX_2D(ii - 2, ii)] = (-1 + 2 * alpha) / 256.0;
+            Q[INDEX_2D(ii - 2, ii - 1)] = (1 + 30 * alpha) / 32.0;
+            Q[INDEX_2D(ii - 2, ii - 2)] = (57 + 14 * alpha) / 64.0;
+            Q[INDEX_2D(ii - 2, ii - 3)] = (7 + 18 * alpha) / 32.0;
+            Q[INDEX_2D(ii - 2, ii - 4)] = 7 * (-5 + 10 * alpha) / 128.0;
+            Q[INDEX_2D(ii - 2, ii - 5)] = (7 - 14 * alpha) / 32.0;
+            Q[INDEX_2D(ii - 2, ii - 6)] = (-7 + 14 * alpha) / 64.0;
+            Q[INDEX_2D(ii - 2, ii - 7)] = (1 - 2 * alpha) / 32.0;
+            Q[INDEX_2D(ii - 2, ii - 8)] = (-1 + 2 * alpha) / 256.0;
+
+            Q[INDEX_2D(ii - 1, ii)] = (1 + 254 * alpha) / 256.0;
+            Q[INDEX_2D(ii - 1, ii - 1)] = (31 + 2 * alpha) / 32.0;
+            Q[INDEX_2D(ii - 1, ii - 2)] = (7 + 50 * alpha) / 64.0;
+            Q[INDEX_2D(ii - 1, ii - 3)] = (-7 + 14 * alpha) / 32.0;
+            Q[INDEX_2D(ii - 1, ii - 4)] = 7 * (5 - 10 * alpha) / 128.0;
+            Q[INDEX_2D(ii - 1, ii - 5)] = (-7 + 14 * alpha) / 32.0;
+            Q[INDEX_2D(ii - 1, ii - 6)] = (7 - 14 * alpha) / 64.0;
+            Q[INDEX_2D(ii - 1, ii - 7)] = (-1 + 2 * alpha) / 32.0;
+            Q[INDEX_2D(ii - 1, ii - 8)] = (1 - 2 * alpha) / 256.0;
+
+            Q[INDEX_2D(ii, ii)] = (255 + alpha) / 256.0;
+            Q[INDEX_2D(ii, ii - 1)] = (1 + 31 * alpha) / 32.0;
+            Q[INDEX_2D(ii, ii - 2)] = (-7 + 7 * alpha) / 64.0;
+            Q[INDEX_2D(ii, ii - 3)] = (7 - 7 * alpha) / 32.0;
+            Q[INDEX_2D(ii, ii - 4)] = 7 * (-5 + 5 * alpha) / 128.0;
+            Q[INDEX_2D(ii, ii - 5)] = (7 - 7 * alpha) / 32.0;
+            Q[INDEX_2D(ii, ii - 6)] = 7 * (-1 + alpha) / 64.0;
+            Q[INDEX_2D(ii, ii - 7)] = (1 - alpha) / 32.0;
+            Q[INDEX_2D(ii, ii - 8)] = (-1 + alpha) / 256.0;
+        }
+    }
+}
+
+void initializeJTFilterT10PQ(double *P, double *Q, int n, double alpha,
+                             bool fbound, bool is_left_edge,
+                             bool is_right_edge) {
+    if (n < 11) {
+        throw std::invalid_argument(
+            "Received n=" + std::to_string(n) +
+            " when initializing JTFilterT10. N must be greater than 11!");
+    }
+
+    // initialize the A matrix corners to 1's
+    P[INDEX_2D(0, 0)] = 1.0;
+    P[INDEX_2D(1, 1)] = 1.0;
+    P[INDEX_2D(2, 2)] = 1.0;
+    P[INDEX_2D(3, 3)] = 1.0;
+    P[INDEX_2D(4, 4)] = 1.0;
+
+    P[INDEX_2D(n - 5, n - 5)] = 1.0;
+    P[INDEX_2D(n - 4, n - 4)] = 1.0;
+    P[INDEX_2D(n - 3, n - 3)] = 1.0;
+    P[INDEX_2D(n - 2, n - 2)] = 1.0;
+    P[INDEX_2D(n - 1, n - 1)] = 1.0;
+
+    // initialize the tridiagonal!
+    for (int ii = 5; ii < n - 5; ii++) {
+        P[INDEX_2D(ii, ii - 1)] = alpha;
+        P[INDEX_2D(ii, ii)] = 1.0;
+        P[INDEX_2D(ii, ii + 1)] = alpha;
+    }
+
+    // From Matlab code at:
+    // https://www.mathworks.com/matlabcentral/fileexchange/93480-compact-filters?s_tid=prof_contriblnk
+
+    /*
+    % Filtre Visbal Gaitonde (voir rapport 1998 + AIAA J. 1999)
+    %
+    % Pour avoir le meme filtre que Seo et Mittal: 2/4/6/8/10/10
+    %
+    % Coefficients des filtres (pour matrice B)
+    % Schema centre, F10: Gaitonde1998 (report), table 2.14
+    */
+
+    double a0_central = (193.0 + 126.0 * alpha) / 256.0;
+    double a1_central = (105.0 + 302.0 * alpha) / 256.0;
+    double a2_central = 15.0 * (-1.0 + 2.0 * alpha) / 64.0;
+    double a3_central = 45.0 * (1.0 - 2.0 * alpha) / 512.0;
+    double a4_central = 5.0 * (-1.0 + 2.0 * alpha) / 256.0;
+    double a5_central = (1.0 - 2.0 * alpha) / 512.0;
+
+    // 1st left boundary point: F2 (FB1,2 dans table 2.19 de Gaitonde)
+    double a_bp1 = 3.0 / 4.0 + alpha / 4.0;
+    double b_bp1 = 1.0 / 2.0 + alpha / 2.0;
+    double c_bp1 = -1.0 / 4.0 + alpha / 4.0;
+    // 2nd left boundary point: F4 (FB2,4 dans table 2.18 de Gaitonde)
+    double a_bp2 = 1.0 / 16.0 + 7.0 * alpha / 8.0;
+    double b_bp2 = 3.0 / 4.0 + alpha / 2.0;
+    double c_bp2 = 3.0 / 8.0 + alpha / 4.0;
+    double d_bp2 = -1.0 / 4.0 + alpha / 2.0;
+    double e_bp2 = 1.0 / 16.0 - alpha / 8.0;
+    // 3rd left boundary point: F6  (FB3,6 dans table 2.17 de Gaitonde)
+    double a_bp3 = -1.0 / 64.0 + alpha / 32.0;
+    double b_bp3 = 3.0 / 32.0 + 13.0 * alpha / 16.0;
+    double c_bp3 = 49.0 / 64.0 + 15.0 * alpha / 32.0;
+    double d_bp3 = 5.0 / 16.0 + 3.0 * alpha / 8.0;
+    double e_bp3 = -15.0 / 64.0 + 15.0 * alpha / 32.0;
+    double f_bp3 = 3.0 / 32.0 - 3.0 * alpha / 16.0;
+    double g_bp3 = -1.0 / 64.0 + alpha / 32.0;
+    // 4th left boundary point: F8  (FB4,8 dans table 2.16 de Gaitonde)
+    double a_bp4 = 1.0 / 256.0 - alpha / 128.0;
+    double b_bp4 = -1.0 / 32.0 + 1.0 * alpha / 16.0;
+    double c_bp4 = 7.0 / 64.0 + 25.0 * alpha / 32.0;
+    double d_bp4 = 25.0 / 32.0 + 7.0 * alpha / 16.0;
+    double e_bp4 = 35.0 / 128.0 + 29.0 * alpha / 64.0;
+    double f_bp4 = -7.0 / 32.0 + 7.0 * alpha / 16.0;
+    double g_bp4 = 7.0 / 64.0 - 7.0 * alpha / 32.0;
+    double h_bp4 = -1.0 / 32.0 + alpha / 16.0;
+    double i_bp4 = 1.0 / 256.0 - alpha / 128.0;
+    // 5th left boundary point: F10 (FB5,10 dans table 2.15 de Gaitonde)
+    double a_bp5 = (-1.0 + 2.0 * alpha) / 1024.0;
+    double b_bp5 = 5.0 * (1.0 - 2.0 * alpha) / 512.0;
+    double c_bp5 = 45.0 * (-1.0 + 2.0 * alpha) / 1024.0;
+    double d_bp5 = (15.0 + 98.0 * alpha) / 128.0;
+    double e_bp5 = (407.0 + 210.0 * alpha) / 512.0;
+    double f_bp5 = (63.0 + 130.0 * alpha) / 256.0;
+    double g_bp5 = 105.0 * (-1.0 + 2.0 * alpha) / 512.0;
+    double h_bp5 = 15.0 * (1.0 - 2.0 * alpha) / 128.0;
+    double i_bp5 = 45.0 * (-1.0 + 2.0 * alpha) / 1024.0;
+    double j_bp5 = 5.0 * (1.0 - 2.0 * alpha) / 512.0;
+    double k_bp5 = (-1.0 + 2.0 * alpha) / 1024.0;
+
+    for (int i = 5; i < n - 5; i++) {
+        Q[INDEX_2D(i, i - 5)] = a5_central / 2.0;
+        Q[INDEX_2D(i, i - 4)] = a4_central / 2.0;
+        Q[INDEX_2D(i, i - 3)] = a3_central / 2.0;
+        Q[INDEX_2D(i, i - 2)] = a2_central / 2.0;
+        Q[INDEX_2D(i, i - 1)] = a1_central / 2.0;
+        Q[INDEX_2D(i, i)] = a0_central;
+        Q[INDEX_2D(i, i + 1)] = a1_central / 2.0;
+        Q[INDEX_2D(i, i + 2)] = a2_central / 2.0;
+        Q[INDEX_2D(i, i + 3)] = a3_central / 2.0;
+        Q[INDEX_2D(i, i + 4)] = a4_central / 2.0;
+        Q[INDEX_2D(i, i + 5)] = a5_central / 2.0;
+    }
+
+    if (fbound) {
+        if (is_left_edge) {
+            P[INDEX_2D(0, 1)] = alpha;
+            P[INDEX_2D(1, 0)] = alpha;
+            P[INDEX_2D(1, 2)] = alpha;
+            P[INDEX_2D(2, 1)] = alpha;
+            P[INDEX_2D(2, 3)] = alpha;
+            P[INDEX_2D(3, 2)] = alpha;
+            P[INDEX_2D(3, 4)] = alpha;
+            P[INDEX_2D(4, 3)] = alpha;
+            P[INDEX_2D(4, 5)] = alpha;
+
+            Q[INDEX_2D(0, 0)] = a_bp1;
+            Q[INDEX_2D(0, 1)] = b_bp1;
+            Q[INDEX_2D(0, 2)] = c_bp1;
+
+            Q[INDEX_2D(1, 0)] = a_bp2;
+            Q[INDEX_2D(1, 1)] = b_bp2;
+            Q[INDEX_2D(1, 2)] = c_bp2;
+            Q[INDEX_2D(1, 3)] = d_bp2;
+            Q[INDEX_2D(1, 4)] = e_bp2;
+
+            Q[INDEX_2D(2, 0)] = a_bp3;
+            Q[INDEX_2D(2, 1)] = b_bp3;
+            Q[INDEX_2D(2, 2)] = c_bp3;
+            Q[INDEX_2D(2, 3)] = d_bp3;
+            Q[INDEX_2D(2, 4)] = e_bp3;
+            Q[INDEX_2D(2, 5)] = f_bp3;
+            Q[INDEX_2D(2, 6)] = g_bp3;
+
+            Q[INDEX_2D(3, 0)] = a_bp4;
+            Q[INDEX_2D(3, 1)] = b_bp4;
+            Q[INDEX_2D(3, 2)] = c_bp4;
+            Q[INDEX_2D(3, 3)] = d_bp4;
+            Q[INDEX_2D(3, 4)] = e_bp4;
+            Q[INDEX_2D(3, 5)] = f_bp4;
+            Q[INDEX_2D(3, 6)] = g_bp4;
+            Q[INDEX_2D(3, 7)] = h_bp4;
+            Q[INDEX_2D(3, 8)] = i_bp4;
+
+            Q[INDEX_2D(4, 0)] = a_bp5;
+            Q[INDEX_2D(4, 1)] = b_bp5;
+            Q[INDEX_2D(4, 2)] = c_bp5;
+            Q[INDEX_2D(4, 3)] = d_bp5;
+            Q[INDEX_2D(4, 4)] = e_bp5;
+            Q[INDEX_2D(4, 5)] = f_bp5;
+            Q[INDEX_2D(4, 6)] = g_bp5;
+            Q[INDEX_2D(4, 7)] = h_bp5;
+            Q[INDEX_2D(4, 8)] = i_bp5;
+            Q[INDEX_2D(4, 9)] = j_bp5;
+            Q[INDEX_2D(4, 10)] = k_bp5;
+        }
+        if (is_right_edge) {
+            P[INDEX_2D(n - 5, n - 6)] = alpha;
+            P[INDEX_2D(n - 5, n - 4)] = alpha;
+            P[INDEX_2D(n - 4, n - 5)] = alpha;
+            P[INDEX_2D(n - 4, n - 3)] = alpha;
+            P[INDEX_2D(n - 3, n - 4)] = alpha;
+            P[INDEX_2D(n - 3, n - 2)] = alpha;
+            P[INDEX_2D(n - 2, n - 2)] = alpha;
+            P[INDEX_2D(n - 2, n - 1)] = alpha;
+            P[INDEX_2D(n - 1, n - 2)] = alpha;
+
+            int ii = n - 1;
+
+            Q[INDEX_2D(ii - 4, ii)] = a_bp5;
+            Q[INDEX_2D(ii - 4, ii - 1)] = b_bp5;
+            Q[INDEX_2D(ii - 4, ii - 2)] = c_bp5;
+            Q[INDEX_2D(ii - 4, ii - 3)] = d_bp5;
+            Q[INDEX_2D(ii - 4, ii - 4)] = e_bp5;
+            Q[INDEX_2D(ii - 4, ii - 5)] = f_bp5;
+            Q[INDEX_2D(ii - 4, ii - 6)] = g_bp5;
+            Q[INDEX_2D(ii - 4, ii - 7)] = h_bp5;
+            Q[INDEX_2D(ii - 4, ii - 8)] = i_bp5;
+            Q[INDEX_2D(ii - 4, ii - 9)] = j_bp5;
+            Q[INDEX_2D(ii - 4, ii - 10)] = k_bp5;
+
+            Q[INDEX_2D(ii - 3, ii)] = a_bp4;
+            Q[INDEX_2D(ii - 3, ii - 1)] = b_bp4;
+            Q[INDEX_2D(ii - 3, ii - 2)] = c_bp4;
+            Q[INDEX_2D(ii - 3, ii - 3)] = d_bp4;
+            Q[INDEX_2D(ii - 3, ii - 4)] = e_bp4;
+            Q[INDEX_2D(ii - 3, ii - 5)] = f_bp4;
+            Q[INDEX_2D(ii - 3, ii - 6)] = g_bp4;
+            Q[INDEX_2D(ii - 3, ii - 7)] = h_bp4;
+            Q[INDEX_2D(ii - 3, ii - 8)] = i_bp4;
+
+            Q[INDEX_2D(ii - 2, ii)] = a_bp3;
+            Q[INDEX_2D(ii - 2, ii - 1)] = b_bp3;
+            Q[INDEX_2D(ii - 2, ii - 2)] = c_bp3;
+            Q[INDEX_2D(ii - 2, ii - 3)] = d_bp3;
+            Q[INDEX_2D(ii - 2, ii - 4)] = e_bp3;
+            Q[INDEX_2D(ii - 2, ii - 5)] = f_bp3;
+            Q[INDEX_2D(ii - 2, ii - 6)] = g_bp3;
+
+            Q[INDEX_2D(ii - 1, ii)] = a_bp2;
+            Q[INDEX_2D(ii - 1, ii - 1)] = b_bp2;
+            Q[INDEX_2D(ii - 1, ii - 2)] = c_bp2;
+            Q[INDEX_2D(ii - 1, ii - 3)] = d_bp2;
+            Q[INDEX_2D(ii - 1, ii - 4)] = e_bp2;
+
+            Q[INDEX_2D(ii, ii)] = a_bp1;
+            Q[INDEX_2D(ii, ii - 1)] = b_bp1;
+            Q[INDEX_2D(ii, ii - 2)] = c_bp1;
+        }
+    }
+}
 void print_square_mat(double *m, const uint32_t n) {
     // assumes "col" order in memory
     // J is the row!

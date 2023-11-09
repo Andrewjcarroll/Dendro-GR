@@ -336,7 +336,8 @@ void buildPandQMatrices2ndOrder(double *P, double *Q, const uint32_t padding,
                                 const bool is_right_edge = false);
 
 void buildPandQFilterMatrices(double *P, double *Q, const uint32_t padding,
-                              const uint32_t n, const FilterType derivtype,
+                              const uint32_t n, const FilterType filtertype,
+                              const double alpha, const bool bound_enable,
                               const bool is_left_edge = false,
                               const bool is_right_edge = false);
 
@@ -411,6 +412,10 @@ class CompactFiniteDiff {
     unsigned int m_padding_size = 0;
 
     double m_beta_filt = 0.0;
+
+    // TODO: make a method that can set these!
+    double m_filt_alpha = 0.0;
+    double m_filt_bound_enable = false;
 
    public:
     CompactFiniteDiff(const unsigned int dim_size,
@@ -532,6 +537,20 @@ void initializeKim4PQ(double *P, double *Q, int n);
  */
 void initializeKim6FilterPQ(double *P, double *Q, int n);
 
+void initializeJTFilterT6PQ(double *P, double *Q, int n, int padding,
+                            double alpha, bool fbound,
+                            bool is_left_edge = false,
+                            bool is_right_edge = false);
+
+void initializeJTFilterT8PQ(double *P, double *Q, int n, int padding,
+                            double alpha, bool fbound,
+                            bool is_left_edge = false,
+                            bool is_right_edge = false);
+
+void initializeJTFilterT10PQ(double *P, double *Q, int n, int padding,
+                             double alpha, bool fbound,
+                             bool is_left_edge = false,
+                             bool is_right_edge = false);
 // KO explicit filters
 
 void buildKOExplicitFilter(double *R, const unsigned int n,
