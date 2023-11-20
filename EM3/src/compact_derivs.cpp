@@ -137,7 +137,6 @@ void CompactFiniteDiff::initialize_cfd_matrix() {
                            ? true
                            : false;
 
-        std::cout << "left/right b" << left_b << " " << right_b << std::endl;
         // check for explicit filters
         if (m_deriv_type == EXPLCT_FD_O4 || m_deriv_type == EXPLCT_FD_O6 ||
             m_deriv_type == EXPLCT_FD_O8) {
@@ -1637,32 +1636,20 @@ void buildPandQFilterMatrices(double *P, double *Q, const uint32_t padding,
 
         initializeKim6FilterPQ(tempP, tempQ, curr_n);
     } else if (filtertype == FILT_JT_6) {
-        std::cout << "Initializing JTFilter T6 PQ" << padding << " " << alpha
-                  << " " << (is_left_edge || is_right_edge) << " "
-                  << is_left_edge << " " << is_right_edge << std::endl;
         initializeJTFilterT6PQ(tempP, tempQ, curr_n, padding, alpha,
                                (is_left_edge || is_right_edge), is_left_edge,
                                is_right_edge);
         // TODO: NOT CURRENTLY IMPLEMENTED
-        std::cerr << "WARNING: The JT 6 filter is not yet ready! This will "
-                     "lead to unexpected results!"
-                  << std::endl;
     } else if (filtertype == FILT_JT_8) {
         initializeJTFilterT8PQ(tempP, tempQ, curr_n, padding, alpha,
                                (is_left_edge || is_right_edge), is_left_edge,
                                is_right_edge);
         // TODO: NOT CURRENTLY IMPLEMENTED
-        std::cerr << "WARNING: The JT 8 filter is not yet ready! This will "
-                     "lead to unexpected results!"
-                  << std::endl;
     } else if (filtertype == FILT_JT_10) {
         initializeJTFilterT10PQ(tempP, tempQ, curr_n, padding, alpha,
                                 (is_left_edge || is_right_edge), is_left_edge,
                                 is_right_edge);
         // TODO: NOT CURRENTLY IMPLEMENTED
-        std::cerr << "WARNING: The JT 10 filter is not yet ready! This will "
-                     "lead to unexpected results!"
-                  << std::endl;
     } else if (filtertype == FILT_NONE || filtertype == FILT_KO_DISS) {
         // just.... do nothing... keep them at zeros
         if (is_left_edge or is_right_edge) {
@@ -2800,8 +2787,6 @@ void kim_filter_cal_coeff(double *c, double kc) {
 void initializeKim6FilterPQ(double *P, double *Q, int n, double kc,
                             double eps) {
     // TODO: expose kc and eps as parameters
-
-    std::cout << "kc and eps " << kc << " " << eps << std::endl;
 
     double c0[3];
     double cd[3];
