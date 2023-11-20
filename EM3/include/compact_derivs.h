@@ -115,6 +115,7 @@ enum FilterType {
     FILT_KIM_6,
     FILT_JT_6,
     FILT_JT_8,
+    FILT_JT_10,
 
     // explicit ko diss
     EXPLCT_KO,
@@ -535,7 +536,12 @@ void initializeKim4PQ(double *P, double *Q, int n);
  * the parallelization of compact finite-difference schemes and
  * filters," Journal of Computational Physics 241 (2013) 168–194.
  */
-void initializeKim6FilterPQ(double *P, double *Q, int n);
+
+// calculates some parts of the kim coefficients for us
+void kim_filter_cal_coeff(double *c, double kc);
+
+void initializeKim6FilterPQ(double *P, double *Q, int n, double kc = 0.88,
+                            double eps = 0.25);
 
 void initializeJTFilterT6PQ(double *P, double *Q, int n, int padding,
                             double alpha, bool fbound,

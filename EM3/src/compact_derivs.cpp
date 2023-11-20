@@ -1581,6 +1581,14 @@ void buildPandQFilterMatrices(double *P, double *Q, const uint32_t padding,
     uint32_t j_start = 0;
     uint32_t j_end = n;
 
+    // bool filterTypeRequiresPreSetBoundaries;
+    //
+    // if (filtertype == FILT_JT_6 || filtertype == FILT_JT_8 ||
+    //     filtertype == FILT_JT_10) {
+    //     filterTypeRequiresPreSetBoundaries = true;
+    // }
+
+    // if (is_left_edge and filterTypeRequiresPreSetBoundaries) {
     if (is_left_edge) {
         // initialize the "diagonal" in the padding to 1
         for (uint32_t ii = 0; ii < padding; ii++) {
@@ -1592,6 +1600,7 @@ void buildPandQFilterMatrices(double *P, double *Q, const uint32_t padding,
         curr_n -= padding;
     }
 
+    // if (is_right_edge and filterTypeRequiresPreSetBoundaries) {
     if (is_right_edge) {
         // initialize bottom "diagonal" in padding to 1 as well
         for (uint32_t ii = n - 1; ii >= n - padding; ii--) {
@@ -1611,7 +1620,9 @@ void buildPandQFilterMatrices(double *P, double *Q, const uint32_t padding,
     double *tempP = nullptr;
     double *tempQ = nullptr;
 
-    if (is_left_edge or is_right_edge) {
+    // if ((is_left_edge or is_right_edge) and
+    //     filterTypeRequiresPreSetBoundaries) {
+    if ((is_left_edge or is_right_edge)) {
         // initialize tempP to be a "smaller" square matrix for use
         tempP = new double[curr_n * curr_n]();
         tempQ = new double[curr_n * curr_n]();
@@ -1626,17 +1637,30 @@ void buildPandQFilterMatrices(double *P, double *Q, const uint32_t padding,
 
         initializeKim6FilterPQ(tempP, tempQ, curr_n);
     } else if (filtertype == FILT_JT_6) {
+        std::cout << "Initializing JTFilter T6 PQ" << padding << " " << alpha
+                  << " " << (is_left_edge || is_right_edge) << " "
+                  << is_left_edge << " " << is_right_edge << std::endl;
         initializeJTFilterT6PQ(tempP, tempQ, curr_n, padding, alpha,
-                               bound_enable, is_left_edge, is_right_edge);
+                               (is_left_edge || is_right_edge), is_left_edge,
+                               is_right_edge);
         // TODO: NOT CURRENTLY IMPLEMENTED
         std::cerr << "WARNING: The JT 6 filter is not yet ready! This will "
                      "lead to unexpected results!"
                   << std::endl;
     } else if (filtertype == FILT_JT_8) {
         initializeJTFilterT8PQ(tempP, tempQ, curr_n, padding, alpha,
-                               bound_enable, is_left_edge, is_right_edge);
+                               (is_left_edge || is_right_edge), is_left_edge,
+                               is_right_edge);
         // TODO: NOT CURRENTLY IMPLEMENTED
         std::cerr << "WARNING: The JT 8 filter is not yet ready! This will "
+                     "lead to unexpected results!"
+                  << std::endl;
+    } else if (filtertype == FILT_JT_10) {
+        initializeJTFilterT10PQ(tempP, tempQ, curr_n, padding, alpha,
+                                (is_left_edge || is_right_edge), is_left_edge,
+                                is_right_edge);
+        // TODO: NOT CURRENTLY IMPLEMENTED
+        std::cerr << "WARNING: The JT 10 filter is not yet ready! This will "
                      "lead to unexpected results!"
                   << std::endl;
     } else if (filtertype == FILT_NONE || filtertype == FILT_KO_DISS) {
@@ -2762,35 +2786,117 @@ void initializeKim4PQ(double *P, double *Q, int n) {
     Q[INDEX_2D(n - 1, n - 7)] = -b06;
 }
 
-void initializeKim6FilterPQ(double *P, double *Q, int n) {
-    const double alphaF = 0.6651452077642562;
-    const double betaF = 0.1669709584471488;
-    const double aF1 = 8.558206326059179e-4;
-    const double aF2 = -3.423282530423672e-4;
-    const double aF3 = 5.705470884039454e-5;
+void kim_filter_cal_coeff(double *c, double kc) {
+    double AF = 30.0 - 5.0 * cos(kc) + 10 * cos(2.0 * kc) - 3.0 * cos(3.0 * kc);
+    double alphaF = -(30.0 * cos(kc) + 2.0 * cos(3.0 * kc)) / AF;
+    double betaF =
+        (18.0 + 9.0 * cos(kc) + 6.0 * cos(2.0 * kc) - cos(3.0 * kc)) /
+        (2.0 * AF);
+    c[0] = AF;
+    c[1] = alphaF;
+    c[2] = betaF;
+}
+
+void initializeKim6FilterPQ(double *P, double *Q, int n, double kc,
+                            double eps) {
+    // TODO: expose kc and eps as parameters
+
+    std::cout << "kc and eps " << kc << " " << eps << std::endl;
+
+    double c0[3];
+    double cd[3];
+    double cdd[3];
+    double cddd[3];
+
+    double t2 = sin(M_PI / 2.0);
+    double t3 = sin(M_PI / 3.0);
+    double t6 = sin(M_PI / 6.0);
+
+    double kcd = kc * (1.0 - eps * t6 * t6);
+    double kcdd = kc * (1.0 - eps * t3 * t3);
+    double kcddd = kc * (1.0 - eps * t2 * t2);
+
+    kim_filter_cal_coeff(c0, kc);
+    kim_filter_cal_coeff(cd, kcd);
+    kim_filter_cal_coeff(cdd, kcdd);
+    kim_filter_cal_coeff(cddd, kcddd);
+
+    const double t1 = cos(0.5 * kc);
+    const double aF1 = 30.0 * t1 * t1 * t1 * t1 / c0[0];
+    const double aF2 = -2.0 * aF1 / 5.0;
+    const double aF3 = aF1 / 15.0;
     const double aF0 = -2.0 * (aF1 + aF2 + aF3);
 
+    const double alphaF = c0[1];
+    const double betaF = c0[2];
+
+    const double alphaFd = cd[1];
+    const double betaFd = cd[2];
+    const double alphaFdd = cdd[1];
+    const double betaFdd = cdd[2];
+    const double alphaFddd = cddd[1];
+    const double betaFddd = cddd[2];
+
+    const double t1d = cos(0.5 * kcd);
+    const double aF1d = 30.0 * t1d * t1d * t1d * t1d / cd[0];
+    const double aF2d = -2.0 * aF1d / 5.0;
+    const double aF3d = aF1d / 15.0;
+
+    const double BF =
+        (1.0 - betaFdd) * (1.0 + 6.0 * betaFdd + 60.0 * betaFdd * betaFdd) +
+        (5.0 + 35 * betaFdd - 29.0 * betaFdd * betaFdd) * alphaFdd +
+        (9.0 - 5.0 * betaFdd) * alphaFdd * alphaFdd;
+    const double CF =
+        1.0 + betaFddd * (5.0 + 4.0 * betaFddd + 60.0 * betaFddd * betaFddd) +
+        5.0 * (1.0 + 3.0 * betaFddd + 10.0 * betaFddd * betaFddd) * alphaFddd +
+        2.0 * (4.0 + 11.0 * betaFddd) * alphaFddd * alphaFddd +
+        5.0 * alphaFddd * alphaFddd * alphaFddd;
+
     const double yF00 = 0.0;
-    const double yF10 = 0.7311329755609861;
-    const double yF20 = 0.1681680891936087;
-    const double yF01 = 0.3412746505356879;
+    const double yF10 =
+        (10.0 * betaFdd * betaFdd * (8.0 * betaFdd - 1.0) +
+         (1.0 + 4.0 * betaFdd + 81.0 * betaFdd * betaFdd) * alphaFdd +
+         5.0 * (1.0 + 8.0 * betaFdd) * alphaFdd * alphaFdd +
+         9.0 * alphaFdd * alphaFdd * alphaFdd) /
+        BF;
+    const double yF20 = betaFd;
+    const double yF01 =
+        (alphaFddd * (1.0 + alphaFddd) * (1.0 + 4.0 * alphaFddd) +
+         2.0 * alphaFddd * (7.0 + 3.0 * alphaFddd) * betaFddd +
+         24.0 * (1.0 - alphaFddd) * betaFddd * betaFddd -
+         80.0 * betaFddd * betaFddd * betaFddd) /
+        CF;
     const double yF11 = 0.0;
-    const double yF21 = 0.6591595540319565;
-    const double yF02 = 0.2351300295562464;
-    const double yF12 = 0.6689728401317021;
+    const double yF21 = alphaFd;
+    const double yF02 =
+        (alphaFddd * alphaFddd * alphaFddd +
+         (1.0 + 3.0 * alphaFddd + 14.0 * alphaFddd * alphaFddd) * betaFddd +
+         46.0 * alphaFddd * betaFddd * betaFddd +
+         60.0 * betaFddd * betaFddd * betaFddd) /
+        CF;
+    const double yF12 =
+        (alphaFdd * (1.0 + 5.0 * alphaFdd + 9.0 * alphaFdd * alphaFdd) +
+         alphaFdd * (5.0 + 36.0 * alphaFdd) * betaFdd +
+         (55.0 * alphaFdd - 1.0) * betaFdd * betaFdd +
+         10.0 * betaFdd * betaFdd * betaFdd) /
+        BF;
     const double yF22 = 0.0;
     const double yF03 = 0.0;
-    const double yF13 = 0.1959510121583215;
-    const double yF23 = 0.6591595540319565;
+    const double yF13 =
+        betaFdd *
+        (1.0 + 5.0 * alphaFdd + 9.0 * alphaFdd * alphaFdd +
+         5.0 * (1.0 + 7.0 * alphaFdd) * betaFdd + 50.0 * betaFdd * betaFdd) /
+        BF;
+    const double yF23 = alphaFd;
     const double yF04 = 0.0;
     const double yF14 = 0.0;
-    const double yF24 = 0.1681680891936087;
+    const double yF24 = betaFd;
 
-    const double bF20 = -2.81516723801634e-4;
-    const double bF21 = 1.40758361900817e-3;
-    const double bF23 = 2.81516723801634e-3;
-    const double bF24 = -1.40758361900817e-3;
-    const double bF25 = 2.81516723801634e-4;
+    const double bF20 = aF2d + 5.0 * aF3d;
+    const double bF21 = aF1d - 10.0 * aF3d;
+    const double bF23 = aF1d - 5.0 * aF3d;
+    const double bF24 = aF2d + aF3d;
+    const double bF25 = aF3d;
     const double bF22 = -(bF20 + bF21 + bF23 + bF24 + bF25);
 
     const int nd = n * n;
@@ -2883,8 +2989,8 @@ void initializeKim6FilterPQ(double *P, double *Q, int n) {
     Q[INDEX_2D(n - 1, n - 1)] = 0.0;
 }
 
-void initializeJTFilterT6PQ(double *P, double *Q, int n, double alpha,
-                            bool fbound, bool is_left_edge,
+void initializeJTFilterT6PQ(double *P, double *Q, int n, int padding,
+                            double alpha, bool fbound, bool is_left_edge,
                             bool is_right_edge) {
     if (n < 7) {
         throw std::invalid_argument(
@@ -2929,6 +3035,7 @@ void initializeJTFilterT6PQ(double *P, double *Q, int n, double alpha,
         Q[INDEX_2D(i, i + 3)] = d / 2.0;
     }
 
+    // fbound asks us to build the filters as if we were right up to the edge
     if (fbound) {
         if (is_left_edge) {
             P[INDEX_2D(0, 1)] = alpha;
@@ -2965,13 +3072,19 @@ void initializeJTFilterT6PQ(double *P, double *Q, int n, double alpha,
             Q[INDEX_2D(ii, ii + 2)] = 15 * (-1 + 2 * alpha) / 64.0;
             Q[INDEX_2D(ii, ii + 3)] = 3 * (1 - 2 * alpha) / 32.0;
             Q[INDEX_2D(ii, ii + 4)] = (-1 + 2 * alpha) / 64.0;
+
+            if (!is_right_edge) {
+                Q[INDEX_2D(n - 3, n - 3)] = 1.0;
+                Q[INDEX_2D(n - 2, n - 2)] = 1.0;
+                Q[INDEX_2D(n - 1, n - 1)] = 1.0;
+            }
         }
 
         if (is_right_edge) {
             P[INDEX_2D(n - 3, n - 4)] = alpha;
             P[INDEX_2D(n - 3, n - 2)] = alpha;
 
-            P[INDEX_2D(n - 2, n - 2)] = alpha;
+            P[INDEX_2D(n - 2, n - 3)] = alpha;
             P[INDEX_2D(n - 2, n - 1)] = alpha;
 
             P[INDEX_2D(n - 1, n - 2)] = alpha;
@@ -3000,12 +3113,24 @@ void initializeJTFilterT6PQ(double *P, double *Q, int n, double alpha,
             Q[INDEX_2D(ii, ii - 4)] = 15 * (-1 + alpha) / 64.0;
             Q[INDEX_2D(ii, ii - 5)] = 3 * (1 - alpha) / 32.0;
             Q[INDEX_2D(ii, ii - 6)] = (-1 + alpha) / 64.0;
+
+            if (!is_left_edge) {
+                Q[INDEX_2D(0, 0)] = 1.0;
+                Q[INDEX_2D(1, 2)] = 1.0;
+                Q[INDEX_2D(2, 2)] = 1.0;
+            }
+        }
+    } else {
+        // otherwise set those bottoms to 1 so they aren't touched
+        for (int ii = 0; ii < 3; ii++) {
+            Q[INDEX_2D(ii, ii)] = 1.0;
+            Q[INDEX_2D(n - 1 - ii, n - 1 - ii)] = 1.0;
         }
     }
 }
 
-void initializeJTFilterT8PQ(double *P, double *Q, int n, double alpha,
-                            bool fbound, bool is_left_edge,
+void initializeJTFilterT8PQ(double *P, double *Q, int n, int padding,
+                            double alpha, bool fbound, bool is_left_edge,
                             bool is_right_edge) {
     if (n < 9) {
         throw std::invalid_argument(
@@ -3052,10 +3177,13 @@ void initializeJTFilterT8PQ(double *P, double *Q, int n, double alpha,
     if (fbound) {
         if (is_left_edge) {
             P[INDEX_2D(0, 1)] = alpha;
+
             P[INDEX_2D(1, 0)] = alpha;
             P[INDEX_2D(1, 2)] = alpha;
+
             P[INDEX_2D(2, 1)] = alpha;
             P[INDEX_2D(2, 3)] = alpha;
+
             P[INDEX_2D(3, 2)] = alpha;
             P[INDEX_2D(3, 4)] = alpha;
 
@@ -3069,43 +3197,53 @@ void initializeJTFilterT8PQ(double *P, double *Q, int n, double alpha,
             Q[INDEX_2D(0, 7)] = (1 - alpha) / 32.0;
             Q[INDEX_2D(0, 8)] = (-1 + alpha) / 256.0;
 
-            Q[INDEX_2D(2, 0)] = (1 + 254 * alpha) / 256.0;
-            Q[INDEX_2D(2, 1)] = (31 + 2 * alpha) / 32.0;
-            Q[INDEX_2D(2, 2)] = (7 + 50 * alpha) / 64.0;
-            Q[INDEX_2D(2, 3)] = (-7 + 14 * alpha) / 32.0;
-            Q[INDEX_2D(2, 4)] = 7 * (5 - 10 * alpha) / 128.0;
-            Q[INDEX_2D(2, 5)] = (-7 + 14 * alpha) / 32.0;
-            Q[INDEX_2D(2, 6)] = (7 - 14 * alpha) / 64.0;
-            Q[INDEX_2D(2, 7)] = (-1 + 2 * alpha) / 32.0;
-            Q[INDEX_2D(2, 8)] = (1 - 2 * alpha) / 256.0;
+            Q[INDEX_2D(1, 0)] = (1 + 254 * alpha) / 256.0;
+            Q[INDEX_2D(1, 1)] = (31 + 2 * alpha) / 32.0;
+            Q[INDEX_2D(1, 2)] = (7 + 50 * alpha) / 64.0;
+            Q[INDEX_2D(1, 3)] = (-7 + 14 * alpha) / 32.0;
+            Q[INDEX_2D(1, 4)] = 7 * (5 - 10 * alpha) / 128.0;
+            Q[INDEX_2D(1, 5)] = (-7 + 14 * alpha) / 32.0;
+            Q[INDEX_2D(1, 6)] = (7 - 14 * alpha) / 64.0;
+            Q[INDEX_2D(1, 7)] = (-1 + 2 * alpha) / 32.0;
+            Q[INDEX_2D(1, 8)] = (1 - 2 * alpha) / 256.0;
 
-            Q[INDEX_2D(3, 0)] = (-1 + 2 * alpha) / 256.0;
-            Q[INDEX_2D(3, 1)] = (1 + 30 * alpha) / 32.0;
-            Q[INDEX_2D(3, 2)] = (57 + 14 * alpha) / 64.0;
-            Q[INDEX_2D(3, 3)] = (7 + 18 * alpha) / 32.0;
-            Q[INDEX_2D(3, 4)] = 7 * (-5 + 10 * alpha) / 128.0;
-            Q[INDEX_2D(3, 5)] = (7 - 14 * alpha) / 32.0;
-            Q[INDEX_2D(3, 6)] = (-7 + 14 * alpha) / 64.0;
-            Q[INDEX_2D(3, 7)] = (1 - 2 * alpha) / 32.0;
-            Q[INDEX_2D(3, 8)] = (-1 + 2 * alpha) / 256.0;
+            Q[INDEX_2D(2, 0)] = (-1 + 2 * alpha) / 256.0;
+            Q[INDEX_2D(2, 1)] = (1 + 30 * alpha) / 32.0;
+            Q[INDEX_2D(2, 2)] = (57 + 14 * alpha) / 64.0;
+            Q[INDEX_2D(2, 3)] = (7 + 18 * alpha) / 32.0;
+            Q[INDEX_2D(2, 4)] = 7 * (-5 + 10 * alpha) / 128.0;
+            Q[INDEX_2D(2, 5)] = (7 - 14 * alpha) / 32.0;
+            Q[INDEX_2D(2, 6)] = (-7 + 14 * alpha) / 64.0;
+            Q[INDEX_2D(2, 7)] = (1 - 2 * alpha) / 32.0;
+            Q[INDEX_2D(2, 8)] = (-1 + 2 * alpha) / 256.0;
 
-            Q[INDEX_2D(4, 0)] = (1 - 2 * alpha) / 256.0;
-            Q[INDEX_2D(4, 1)] = (-1 + 2 * alpha) / 32.0;
-            Q[INDEX_2D(4, 2)] = (7 + 50 * alpha) / 64.0;
-            Q[INDEX_2D(4, 3)] = (25 + 14 * alpha) / 32.0;
-            Q[INDEX_2D(4, 4)] = (35 + 58 * alpha) / 128.0;
-            Q[INDEX_2D(4, 5)] = (-7 + 14 * alpha) / 32.0;
-            Q[INDEX_2D(4, 6)] = (7 - 14 * alpha) / 64.0;
-            Q[INDEX_2D(4, 7)] = (-1 + 2 * alpha) / 32.0;
-            Q[INDEX_2D(4, 8)] = (1 - 2 * alpha) / 256.0;
+            Q[INDEX_2D(3, 0)] = (1 - 2 * alpha) / 256.0;
+            Q[INDEX_2D(3, 1)] = (-1 + 2 * alpha) / 32.0;
+            Q[INDEX_2D(3, 2)] = (7 + 50 * alpha) / 64.0;
+            Q[INDEX_2D(3, 3)] = (25 + 14 * alpha) / 32.0;
+            Q[INDEX_2D(3, 4)] = (35 + 58 * alpha) / 128.0;
+            Q[INDEX_2D(3, 5)] = (-7 + 14 * alpha) / 32.0;
+            Q[INDEX_2D(3, 6)] = (7 - 14 * alpha) / 64.0;
+            Q[INDEX_2D(3, 7)] = (-1 + 2 * alpha) / 32.0;
+            Q[INDEX_2D(3, 8)] = (1 - 2 * alpha) / 256.0;
+
+            if (!is_right_edge) {
+                Q[INDEX_2D(n - 4, n - 4)] = 1.0;
+                Q[INDEX_2D(n - 3, n - 3)] = 1.0;
+                Q[INDEX_2D(n - 2, n - 2)] = 1.0;
+                Q[INDEX_2D(n - 1, n - 1)] = 1.0;
+            }
         }
         if (is_right_edge) {
             P[INDEX_2D(n - 4, n - 5)] = alpha;
             P[INDEX_2D(n - 4, n - 3)] = alpha;
+
             P[INDEX_2D(n - 3, n - 4)] = alpha;
             P[INDEX_2D(n - 3, n - 2)] = alpha;
+
             P[INDEX_2D(n - 2, n - 3)] = alpha;
             P[INDEX_2D(n - 2, n - 1)] = alpha;
+
             P[INDEX_2D(n - 1, n - 2)] = alpha;
 
             int ii = n - 1;
@@ -3149,12 +3287,25 @@ void initializeJTFilterT8PQ(double *P, double *Q, int n, double alpha,
             Q[INDEX_2D(ii, ii - 6)] = 7 * (-1 + alpha) / 64.0;
             Q[INDEX_2D(ii, ii - 7)] = (1 - alpha) / 32.0;
             Q[INDEX_2D(ii, ii - 8)] = (-1 + alpha) / 256.0;
+
+            if (!is_left_edge) {
+                Q[INDEX_2D(0, 0)] = 1.0;
+                Q[INDEX_2D(1, 2)] = 1.0;
+                Q[INDEX_2D(2, 2)] = 1.0;
+                Q[INDEX_2D(3, 3)] = 1.0;
+            }
+        }
+    } else {
+        // otherwise set those bottoms to 1 so they aren't touched
+        for (int ii = 0; ii < 4; ii++) {
+            Q[INDEX_2D(ii, ii)] = 1.0;
+            Q[INDEX_2D(n - 1 - ii, n - 1 - ii)] = 1.0;
         }
     }
 }
 
-void initializeJTFilterT10PQ(double *P, double *Q, int n, double alpha,
-                             bool fbound, bool is_left_edge,
+void initializeJTFilterT10PQ(double *P, double *Q, int n, int padding,
+                             double alpha, bool fbound, bool is_left_edge,
                              bool is_right_edge) {
     if (n < 11) {
         throw std::invalid_argument(
@@ -3259,12 +3410,16 @@ void initializeJTFilterT10PQ(double *P, double *Q, int n, double alpha,
     if (fbound) {
         if (is_left_edge) {
             P[INDEX_2D(0, 1)] = alpha;
+
             P[INDEX_2D(1, 0)] = alpha;
             P[INDEX_2D(1, 2)] = alpha;
+
             P[INDEX_2D(2, 1)] = alpha;
             P[INDEX_2D(2, 3)] = alpha;
+
             P[INDEX_2D(3, 2)] = alpha;
             P[INDEX_2D(3, 4)] = alpha;
+
             P[INDEX_2D(4, 3)] = alpha;
             P[INDEX_2D(4, 5)] = alpha;
 
@@ -3307,16 +3462,28 @@ void initializeJTFilterT10PQ(double *P, double *Q, int n, double alpha,
             Q[INDEX_2D(4, 8)] = i_bp5;
             Q[INDEX_2D(4, 9)] = j_bp5;
             Q[INDEX_2D(4, 10)] = k_bp5;
+
+            if (!is_right_edge) {
+                Q[INDEX_2D(n - 5, n - 5)] = 1.0;
+                Q[INDEX_2D(n - 4, n - 4)] = 1.0;
+                Q[INDEX_2D(n - 3, n - 3)] = 1.0;
+                Q[INDEX_2D(n - 2, n - 2)] = 1.0;
+                Q[INDEX_2D(n - 1, n - 1)] = 1.0;
+            }
         }
         if (is_right_edge) {
             P[INDEX_2D(n - 5, n - 6)] = alpha;
             P[INDEX_2D(n - 5, n - 4)] = alpha;
+
             P[INDEX_2D(n - 4, n - 5)] = alpha;
             P[INDEX_2D(n - 4, n - 3)] = alpha;
+
             P[INDEX_2D(n - 3, n - 4)] = alpha;
             P[INDEX_2D(n - 3, n - 2)] = alpha;
-            P[INDEX_2D(n - 2, n - 2)] = alpha;
+
+            P[INDEX_2D(n - 2, n - 3)] = alpha;
             P[INDEX_2D(n - 2, n - 1)] = alpha;
+
             P[INDEX_2D(n - 1, n - 2)] = alpha;
 
             int ii = n - 1;
@@ -3360,6 +3527,20 @@ void initializeJTFilterT10PQ(double *P, double *Q, int n, double alpha,
             Q[INDEX_2D(ii, ii)] = a_bp1;
             Q[INDEX_2D(ii, ii - 1)] = b_bp1;
             Q[INDEX_2D(ii, ii - 2)] = c_bp1;
+
+            if (!is_left_edge) {
+                Q[INDEX_2D(0, 0)] = 1.0;
+                Q[INDEX_2D(1, 2)] = 1.0;
+                Q[INDEX_2D(2, 2)] = 1.0;
+                Q[INDEX_2D(3, 3)] = 1.0;
+                Q[INDEX_2D(4, 4)] = 1.0;
+            }
+        }
+    } else {
+        // otherwise set those bottoms to 1 so they aren't touched
+        for (int ii = 0; ii < 5; ii++) {
+            Q[INDEX_2D(ii, ii)] = 1.0;
+            Q[INDEX_2D(n - 1 - ii, n - 1 - ii)] = 1.0;
         }
     }
 }
