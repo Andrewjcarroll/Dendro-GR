@@ -52,6 +52,7 @@ kde
 *.pdf
 .vscode
 .python-version
-CMakeFiles/
 
+# some CMake files if you use cmake to create the build directory
+CMakeFiles/
 .cache/
