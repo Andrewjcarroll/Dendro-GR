@@ -82,8 +82,8 @@ void boris_init(double_t *u_var, const uint32_t *sz, const double_t *deltas,
                 double_t *u_dz = nullptr, double_t *u_dxx = nullptr,
                 double_t *u_dyy = nullptr, double_t *u_dzz = nullptr) {
     const double_t x_start = 0.0;
-    const double_t y_start = 1.0;
-    const double_t z_start = 1.5;
+    const double_t y_start = 15.0;
+    const double_t z_start = -10.0;
     const double_t dx = deltas[0];
     const double_t dy = deltas[1];
     const double_t dz = deltas[2];
@@ -377,6 +377,26 @@ double_t calc_l2_norm(double_t *const u_var, double_t *const v_var,
     return sqrt(sum);
 }
 
+double_t calc_3d_l2_without_padding(double_t *const u_var,
+                                    double_t *const v_var, const uint32_t *sz) {
+    const unsigned int nx = sz[0];
+    const unsigned int ny = sz[1];
+    const unsigned int nz = sz[2];
+
+    double_t sum = 0.0;
+
+    for (uint32_t k = helpers::padding; k < sz[2] - helpers::padding; k++) {
+        for (uint32_t j = helpers::padding; j < sz[1] - helpers::padding; j++) {
+            for (uint32_t i = helpers::padding; i < sz[0] - helpers::padding;
+                 i++) {
+                sum += (u_var[IDX(i, j, k)] - v_var[IDX(i, j, k)]) *
+                       (u_var[IDX(i, j, k)] - v_var[IDX(i, j, k)]);
+            }
+        }
+    }
+    return sqrt(sum);
+}
+
 void test_cfd_with_original_stencil(
     double_t *const u_var, const uint32_t *sz, const double *deltas,
     dendro_cfd::CompactFiniteDiff *cfd, double_t *u_dx = nullptr,
@@ -478,18 +498,40 @@ void test_cfd_with_original_stencil(
     double *u_var_copy = new double[totalSize];
 
     std::copy_n(u_var, totalSize, u_var_copy);
+
+    std::ofstream fileForFilter("testOutputFilter.bin",
+                                std::ios::binary | std::ios::out);
+    fileForFilter.write((char *)&totalSize, sizeof(totalSize));
+    fileForFilter.write((char *)u_var_copy, sizeof(double) * totalSize);
     std::cout << "\nL2 before filts: "
-              << calc_l2_norm(u_var, u_var_copy, totalSize) << std::endl;
+              << calc_l2_norm(u_var, u_var_copy, totalSize)
+              << " - without padding: "
+              << calc_3d_l2_without_padding(u_var, u_var_copy, sz) << std::endl;
 
     cfd->filter_cfd_x(u_var_copy, derivx_cfd, deltas[0], sz, bflag);
+    fileForFilter.write((char *)u_var_copy, sizeof(double) * totalSize);
     std::cout << "L2 after X Filt: "
-              << calc_l2_norm(u_var, u_var_copy, totalSize) << std::endl;
+              << calc_l2_norm(u_var, u_var_copy, totalSize)
+              << " - without padding: "
+              << calc_3d_l2_without_padding(u_var, u_var_copy, sz) << std::endl;
+
     cfd->filter_cfd_y(u_var_copy, derivy_cfd, deltas[0], sz, bflag);
+    fileForFilter.write((char *)u_var_copy, sizeof(double) * totalSize);
     std::cout << "L2 after Y Filt: "
-              << calc_l2_norm(u_var, u_var_copy, totalSize) << std::endl;
+              << calc_l2_norm(u_var, u_var_copy, totalSize)
+              << " - without padding: "
+              << calc_3d_l2_without_padding(u_var, u_var_copy, sz) << std::endl;
+
     cfd->filter_cfd_z(u_var_copy, derivz_cfd, deltas[0], sz, bflag);
+    fileForFilter.write((char *)u_var_copy, sizeof(double) * totalSize);
     std::cout << "L2 after Z Filt: "
-              << calc_l2_norm(u_var, u_var_copy, totalSize) << std::endl;
+              << calc_l2_norm(u_var, u_var_copy, totalSize)
+              << " - without padding: "
+              << calc_3d_l2_without_padding(u_var, u_var_copy, sz) << std::endl;
+
+    // DUMP FILTERED RESULTS
+    fileForFilter.close();
+
     cfd->cfd_x(derivx_cfd, u_var_copy, deltas[0], sz, bflag);
     cfd->cfd_y(derivy_cfd, u_var_copy, deltas[1], sz, bflag);
     cfd->cfd_z(derivz_cfd, u_var_copy, deltas[2], sz, bflag);
@@ -813,7 +855,7 @@ int main(int argc, char **argv) {
     double_t *u_dyy_true = new double_t[sz[0] * sz[1] * sz[2]]();
     double_t *u_dzz_true = new double_t[sz[0] * sz[1] * sz[2]]();
 
-    double_t deltas[3] = {0.1, 0.05, 0.025};
+    double_t deltas[3] = {0.02, 0.01, 0.01};
 
     init_data(data_init, u_var, sz, deltas, u_dx_true, u_dy_true, u_dz_true,
               u_dxx_true, u_dyy_true, u_dzz_true);

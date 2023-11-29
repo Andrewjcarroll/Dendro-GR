@@ -210,6 +210,16 @@ void CompactFiniteDiff::initialize_cfd_filter() {
         return;
     }
 
+    // IMPORTANT: SET THE BETA PARAMETER BASED ON THE FILTER TYPE
+    // NOTE: the use of this parameter will depend on if we are *adding* the
+    // filter to the results or not. I.e., the Kim filters calculate the
+    // *difference*, while the JT filters calculate the results. So, KIM needs
+    // beta = 1.0, while JT needs beta = 0.0. 0.0 is the default (defined in
+    // compact_derivs.h)!
+    if (m_filter_type == FilterType::FILT_KIM_6) {
+        m_beta_filt = 1.0;
+    }
+
     // temporary P and Q storage used in calculations
     double *P = new double[m_curr_dim_size * m_curr_dim_size]();
     double *Q = new double[m_curr_dim_size * m_curr_dim_size]();
@@ -471,16 +481,16 @@ void CompactFiniteDiff::cfd_z(double *const Dzu, const double *const u,
     kernel_type kernel(LIBXSMM_GEMM_FLAG_TRANS_B, M, N, K, 1.0, 0.0);
     assert(kernel);
 #else
-    int N = 1;
+    int N = nx;
 #endif
 
     for (unsigned int j = 0; j < ny; j++) {
-#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
         for (unsigned int k = 0; k < nz; k++) {
             // copy the slice of X values over
             std::copy_n(&u[INDEX_3D(0, j, k)], nx, &m_u2d[INDEX_N2D(0, k, nx)]);
         }
 
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
         // now do the faster math multiplcation
         kernel(R_mat_use, m_u2d, m_du2d);
 
@@ -493,10 +503,6 @@ void CompactFiniteDiff::cfd_z(double *const Dzu, const double *const u,
         }
 
 #else
-        for (unsigned int k = 0; k < nz; k++) {
-            // copy slice of X values over
-            std::copy_n(&u[INDEX_3D(0, j, k)], nx, &m_u2d[INDEX_N2D(0, k, nx)]);
-        }
 
         // now we have a transposed matrix to send into dgemm_
         dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &M, m_u2d, &K,
@@ -613,6 +619,7 @@ void CompactFiniteDiff::cfd_xx(double *const Dxu, const double *const u,
     }
 #endif
 
+#if 0
     for (int k = 0; k < nz; k++) {
         for (int j = 0; j < ny; j++) {
             for (int i = 0; i < nx; i++) {
@@ -629,6 +636,7 @@ void CompactFiniteDiff::cfd_xx(double *const Dxu, const double *const u,
             }
         }
     }
+#endif
 }
 
 void CompactFiniteDiff::cfd_yy(double *const Dyu, const double *const u,
@@ -714,6 +722,7 @@ void CompactFiniteDiff::cfd_yy(double *const Dyu, const double *const u,
     }
 #endif
 
+#if 0
     for (int k = 0; k < nz; k++) {
         for (int j = 0; j < ny; j++) {
             for (int i = 0; i < nx; i++) {
@@ -727,6 +736,7 @@ void CompactFiniteDiff::cfd_yy(double *const Dyu, const double *const u,
             }
         }
     }
+#endif
 }
 
 void CompactFiniteDiff::cfd_zz(double *const Dzu, const double *const u,
@@ -737,7 +747,7 @@ void CompactFiniteDiff::cfd_zz(double *const Dzu, const double *const u,
     const unsigned int nz = sz[2];
 
     char TRANSA = 'N';
-    char TRANSB = 'N';
+    char TRANSB = 'T';
     int M = nz;
     int K = nz;
     double alpha = 1.0 / (dz * dz);
@@ -767,15 +777,15 @@ void CompactFiniteDiff::cfd_zz(double *const Dzu, const double *const u,
     kernel_type kernel(LIBXSMM_GEMM_FLAG_TRANS_B, M, N, K, 1.0, 0.0);
     assert(kernel);
 #else
-    int N = 1;
+    int N = nx;
 #endif
 
     for (unsigned int j = 0; j < ny; j++) {
-#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
         for (unsigned int k = 0; k < nz; k++) {
-            // copy the slice of X values over
+            // copy slice of X values over
             std::copy_n(&u[INDEX_3D(0, j, k)], nx, &m_u2d[INDEX_N2D(0, k, nx)]);
         }
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
 
         // now do the faster math multiplcation
         kernel(R_mat_use, m_u2d, m_du2d);
@@ -789,11 +799,6 @@ void CompactFiniteDiff::cfd_zz(double *const Dzu, const double *const u,
         }
 
 #else
-
-        for (unsigned int k = 0; k < nz; k++) {
-            // copy slice of X values over
-            std::copy_n(&u[INDEX_3D(0, j, k)], nx, &m_u2d[INDEX_N2D(0, k, nx)]);
-        }
 
         // now we have a transposed matrix to send into dgemm_
         dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &M, m_u2d, &K,
@@ -815,6 +820,7 @@ void CompactFiniteDiff::cfd_zz(double *const Dzu, const double *const u,
     }
 #endif
 
+#if 0
     for (int k = 0; k < nz; k++) {
         for (int j = 0; j < ny; j++) {
             for (int i = 0; i < nx; i++) {
@@ -828,6 +834,7 @@ void CompactFiniteDiff::cfd_zz(double *const Dzu, const double *const u,
             }
         }
     }
+#endif
 }
 
 void CompactFiniteDiff::filter_cfd_x(double *const u, double *const filtx_work,
@@ -841,8 +848,11 @@ void CompactFiniteDiff::filter_cfd_x(double *const u, double *const filtx_work,
     const unsigned int ny = sz[1];
     const unsigned int nz = sz[2];
 
-    // copy u to filtx_work
-    std::copy_n(u, nx * ny * nz, filtx_work);
+    // ONLY COPY if we're doing a KIM filter
+    if (m_filter_type == FilterType::FILT_KIM_6) {
+        // copy u to filtx_work
+        std::copy_n(u, nx * ny * nz, filtx_work);
+    }
 
     char TRANSA = 'N';
     char TRANSB = 'N';
@@ -962,10 +972,12 @@ void CompactFiniteDiff::filter_cfd_y(double *const u, double *const filty_work,
 #endif
 
     for (unsigned int k = 0; k < nz; k++) {
-        // transpose into filty_work as a copy
-        for (unsigned int j = 0; j < ny; j++) {
-            for (unsigned int i = 0; i < nx; i++) {
-                filty_work[j + i * ny] = u_curr_chunk[i + j * nx];
+        if (m_filter_type == FilterType::FILT_KIM_6) {
+            // transpose into filty_work as a copy
+            for (unsigned int j = 0; j < ny; j++) {
+                for (unsigned int i = 0; i < nx; i++) {
+                    filty_work[j + i * ny] = u_curr_chunk[i + j * nx];
+                }
             }
         }
 
@@ -1008,9 +1020,8 @@ void CompactFiniteDiff::filter_cfd_z(double *const u, double *const filtz_work,
     const unsigned int nz = sz[2];
 
     char TRANSA = 'N';
-    char TRANSB = 'N';
+    char TRANSB = 'T';
     int M = nz;
-    int N = 1;
     int K = nz;
     double alpha = 1.0;
     double beta = 1.0;
@@ -1029,30 +1040,58 @@ void CompactFiniteDiff::filter_cfd_z(double *const u, double *const filtz_work,
         RF_mat_use = m_RMatrices[CompactDerivValueOrder::FILT_LEFTRIGHT];
     }
 
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+    int N = nx;
+    typedef libxsmm_mmfunction<double> kernel_type;
+    // kernel_type kernel(LIBXSMM_GEMM_FLAGS(TRANSA, TRANSB), M, N, K, alpha,
+    // beta);
+    // TODO: figure out why an alpha of not 1 is breaking the kernel
+    kernel_type kernel(LIBXSMM_GEMM_FLAG_TRANS_B, M, N, K, 1.0, 0.0);
+    assert(kernel);
+#else
+    int N = nx;
+#endif
+
     for (unsigned int j = 0; j < ny; j++) {
-        for (unsigned int i = 0; i < nx; i++) {
-            for (unsigned int k = 0; k < nz; k++) {
-                m_u1d[k] = u[INDEX_3D(i, j, k)];
-                filtz_work[k] = u[INDEX_3D(i, j, k)];
+        for (unsigned int k = 0; k < nz; k++) {
+            // copy slice of X values over
+            std::copy_n(&u[INDEX_3D(0, j, k)], nx, &m_u2d[INDEX_N2D(0, k, nx)]);
+            // std::copy_n(&u[INDEX_3D(0, j, k)], nx,
+            //             &m_du2d[INDEX_N2D(0, k, nx)]);
+        }
+
+        if (m_filter_type == FilterType::FILT_KIM_6) {
+            // then we need to copy in m_u2d to m_du2d but transposed
+            for (unsigned int i = 0; i < nx; i++) {
+                for (unsigned int k = 0; k < nz; k++) {
+                    m_du2d[k + i * nz] = m_u2d[i + k * nx];
+                }
             }
+        }
 
 #ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
-            dgemv_(&TRANSA, &M, &K, &alpha, RF_mat_use, &M, m_u1d, &N, &beta,
-                   filtz_work, &N);
 
+        // now do the faster math multiplcation
+        kernel(RF_mat_use, m_u2d, m_du2d);
+
+        // then we just stick it back in, but now in memory it's stored as z0,
+        // z1, z2,... then increases in x so we can't just do copy_n
+        for (unsigned int i = 0; i < nx; i++) {
             for (unsigned int k = 0; k < nz; k++) {
-                u[INDEX_3D(i, j, k)] = filtz_work[k];
+                Dzu[INDEX_3D(i, j, k)] = m_du2d[k + i * nz];
             }
-#else
-            dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, RF_mat_use, &M, m_u1d,
-                   &K, &m_beta_filt, filtz_work, &M);
-
-            for (int k = 0; k < nz; k++) {
-                u[INDEX_3D(i, j, k)] = filtz_work[k];
-            }
-
-#endif
         }
+#else
+
+        dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, RF_mat_use, &M, m_u2d, &K,
+               &m_beta_filt, m_du2d, &M);
+
+        for (unsigned int i = 0; i < nx; i++) {
+            for (unsigned int k = 0; k < nz; k++) {
+                u[INDEX_3D(i, j, k)] = m_du2d[k + i * nz];
+            }
+        }
+#endif
     }
 }
 
