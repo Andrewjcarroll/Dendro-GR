@@ -435,6 +435,11 @@ class CompactFiniteDiff {
 
     void set_filter_type(FilterType filter_type) {
         m_filter_type = filter_type;
+        if (m_filter_type == FilterType::FILT_KIM_6) {
+            m_beta_filt = 1.0;
+        } else {
+            m_beta_filt = 0.0;
+        }
     }
 
     void set_deriv_type(const DerType deriv_type) {

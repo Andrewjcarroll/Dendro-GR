@@ -4,7 +4,7 @@
 #include <stdexcept>
 
 // #define FASTER_DERIV_CALC_VIA_MATRIX_MULT
-#define PRINT_COMPACT_MATRICES
+// #define PRINT_COMPACT_MATRICES
 
 namespace dendro_cfd {
 
