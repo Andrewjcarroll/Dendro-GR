@@ -2618,7 +2618,7 @@ void buildMatrixRight2nd(double *P, double *Q, int *xie, const DerType2nd dtype,
 
         } break;
 
-        case CFD_P1_O6_L6_CLOSE: {
+        case CFD2ND_P2_O6_L6_CLOSE: {
             if (nghosts < 2) {
                 throw std::invalid_argument(
                     "Not enough dimensionality in ghost points! Need at least "
@@ -2627,7 +2627,7 @@ void buildMatrixRight2nd(double *P, double *Q, int *xie, const DerType2nd dtype,
             }
             // FIXME
             throw dendro_cfd::CFDNotImplemented(
-                "Second order Right Side CFD_P1_O6_L6_CLOSE not implemented!");
+                "Second order Right Side P2_O6_L6_CLOSE not implemented!");
         } break;
 
         case CFD2ND_Q2_O6_ETA1_CLOSE: {
