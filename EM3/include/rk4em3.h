@@ -88,74 +88,120 @@ class RK4_EM3 : public RK {
      * @param[in] pTBegin: RK45 time begin
      * @param[in] pTEnd: RK45 time end
      * @param[in] pTh: times step size.
-     * * */
+     */
     RK4_EM3(ot::Mesh *pMesh, double pTBegin, double pTEnd, double pTh);
 
     /**@brief default destructor*/
     ~RK4_EM3();
 
-    /** @brief: read parameters related to EM3 simulation and store them in
-     * static variables defined in parameters.h*/
+    /**
+     * @brief: read parameters related to EM3 simulation and store them in
+     * static variables defined in parameters.h
+     */
     void readConfigFile(const char *fName);
 
-    /**@brief: starts the rk-45 solver. */
+    /**
+     * @brief: starts the rk-45 solver.
+     */
     void rkSolve();
 
-    /** @brief: restore rk45 solver from a given checkpoint. This will overwrite
+    /**
+     * @brief: restore rk45 solver from a given checkpoint. This will overwrite
      * the parameters given in the original constructor
-     *  @param[in]fNamePrefix: checkpoint file pre-fix name.
-     *  @param[in]step: step number which needs to be restored.
-     *  @param[in]comm: MPI communicator.
-     * */
+     * @param[in]fNamePrefix: checkpoint file pre-fix name.
+     * @param[in]step: step number which needs to be restored.
+     * @param[in]comm: MPI communicator.
+     */
     void restoreCheckPoint(const char *fNamePrefix, MPI_Comm comm);
 
    private:
-    /** apply intial conditions*/
+    /**
+     * @brief Applies initial conditions.
+     * @param[in] zipIn Array of pointers to variables.
+     */
     void applyInitialConditions(double **zipIn);
 
-    /**performs initial grid convergence until the mesh converges to initial
-     * data. */
+    /**
+     * @brief Performs initial grid convergence until the mesh converges to
+     * initial data.
+     */
     void initialGridConverge();
 
-    /** reallocates mpi resources if the mesh is changed, (need to be called
-     * during refmesing)*/
+    /**
+     * @brief Reallocates MPI resources if the mesh is changed (needs to be
+     * called during mesh refinement).
+     */
     void reallocateMPIResources();
 
-    /** @brief: perform ghost exchange for all vars*/
+    /**
+     * @brief Performs ghost exchange for all variables.
+     * @param[in] zipIn Array of pointers to variables.
+     */
     void performGhostExchangeVars(double **zipIn);
 
-    /**@brief: performs the intergrid transfer*/
+    /**
+     * @brief Performs the intergrid transfer.
+     * @param[in,out] zipIn Array of pointers to variables.
+     * @param[in] pnewMesh Pointer to the new mesh.
+     */
     void intergridTransferVars(double **&zipIn, const ot::Mesh *pnewMesh);
 
-    /**@brief unzip all the vars specified in VARS*/
+    /**
+     * @brief Unzips all the variables specified in VARS.
+     * @param[in] zipIn Array of pointers to zipped variables.
+     * @param[out] uzipOut Array of pointers to unzipped variables.
+     */
     void unzipVars(double **zipIn, double **uzipOut);
 
-    /**@brief unzip all the vars specified in VARS*/
+    /**
+     * @brief Asynchronously unzips all the variables specified in VARS.
+     * @param[in] zipIn Array of pointers to zipped variables.
+     * @param[out] uzipOut Array of pointers to unzipped variables.
+     */
     void unzipVars_async(double **zipIn, double **uzipOut);
 
-    /**@brief zip all the variables specified in VARS*/
+    /**
+     * @brief Zips all the variables specified in VARS.
+     * @param[in] uzipIn Array of pointers to unzipped variables.
+     * @param[out] zipOut Array of pointers to zipped variables.
+     */
     void zipVars(double **uzipIn, double **zipOut);
 
-    /**@brief write the solution to vtu file. */
-    // void writeToVTU(double **evolZipVarIn, double ** constrZipVarIn, unsigned
-    // int numEvolVars,unsigned int numConstVars,const unsigned int *
-    // evolVarIndices, const unsigned int * constVarIndices);
+    /**
+     * @brief Writes the solution to a VTU file.
+     * @param[in] evolZipVarIn Array of pointers to zipped evolved variables.
+     * @param[in] constrZipVarIn Array of pointers to zipped constrained vars.
+     * @param[in] numEvolVars Number of evolved variables.
+     * @param[in] numConstVars Number of constrained variables.
+     * @param[in] evolVarIndices Array of indices for evolved variables.
+     * @param[in] constVarIndices Array of indices for constrained variables.
+     * @param[in] zslice Flag indicating whether to only use z-slice..
+     */
     void writeToVTU(double **evolZipVarIn, double **constrZipVarIn,
                     unsigned int numEvolVars, unsigned int numConstVars,
                     const unsigned int *evolVarIndices,
                     const unsigned int *constVarIndices, bool zslice);
 
-    /**@brief: Implementation of the base class time step function*/
+    /**
+     * @brief Implementation of the base class time step function.
+     */
     void performSingleIteration();
 
-    /**@brief: Implementation of the base class function to apply boundary
-     * conditions. */
+    /**
+     * @brief Implementation of the base class function to apply boundary
+     * conditions.
+     */
     void applyBoundaryConditions();
 
-    /**@brief: stores the all the variables that is required to restore the rk45
-     * solver at a given stage.
-     * @param[in] fNamePrefix: checkpoint file pre-fix name.
-     * */
+    /** @brief: Applys a filter to the evolution variables.
+     */
+    void applyFilter();
+
+    /**
+     * @brief Stores variables required to restore the RK45 solver at a given
+     * stage.
+     * @param[in] fNamePrefix Checkpoint file prefix name.
+     */
     void storeCheckPoint(const char *fNamePrefix);
 };
 
