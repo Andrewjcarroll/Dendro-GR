@@ -685,3 +685,53 @@ void em3_bcs(double *f_rhs, const double *f, const double *dxf,
  *
  *
  *----------------------------------------------------------------------*/
+
+void apply_filters(double **uZipVars, const unsigned int &offset,
+                   const double *pmin, const double *pmax,
+                   const unsigned int *sz, const unsigned int &bflag) {
+    const unsigned int nx = sz[0];
+    const unsigned int ny = sz[1];
+    const unsigned int nz = sz[2];
+    const double hx = (pmax[0] - pmin[0]) / (nx - 1);
+    const double hy = (pmax[1] - pmin[1]) / (ny - 1);
+    const double hz = (pmax[2] - pmin[2]) / (nz - 1);
+    double *const E0 = &uZipVars[VAR::U_E0][offset];
+    double *const E1 = &uZipVars[VAR::U_E1][offset];
+    double *const E2 = &uZipVars[VAR::U_E2][offset];
+    double *const B0 = &uZipVars[VAR::U_B0][offset];
+    double *const B1 = &uZipVars[VAR::U_B1][offset];
+    double *const B2 = &uZipVars[VAR::U_B2][offset];
+
+    const unsigned int n = sz[0] * sz[1] * sz[2];
+    const unsigned int BLK_SZ = n;
+    double *const deriv_base = em3::EM3_DERIV_WORKSPACE;
+    //
+    double *mem_workspace = deriv_base + 0 * BLK_SZ;
+
+    cfd.filter_cfd_x(E0, mem_workspace, hx, sz, bflag);
+    cfd.filter_cfd_y(E0, mem_workspace, hy, sz, bflag);
+    cfd.filter_cfd_z(E0, mem_workspace, hz, sz, bflag);
+
+    cfd.filter_cfd_x(E1, mem_workspace, hx, sz, bflag);
+    cfd.filter_cfd_y(E1, mem_workspace, hy, sz, bflag);
+    cfd.filter_cfd_z(E1, mem_workspace, hz, sz, bflag);
+
+    cfd.filter_cfd_x(E2, mem_workspace, hx, sz, bflag);
+    cfd.filter_cfd_y(E2, mem_workspace, hy, sz, bflag);
+    cfd.filter_cfd_z(E2, mem_workspace, hz, sz, bflag);
+
+    cfd.filter_cfd_x(B0, mem_workspace, hx, sz, bflag);
+    cfd.filter_cfd_y(B0, mem_workspace, hy, sz, bflag);
+    cfd.filter_cfd_z(B0, mem_workspace, hz, sz, bflag);
+
+    cfd.filter_cfd_x(B1, mem_workspace, hx, sz, bflag);
+    cfd.filter_cfd_y(B1, mem_workspace, hy, sz, bflag);
+    cfd.filter_cfd_z(B1, mem_workspace, hz, sz, bflag);
+
+    cfd.filter_cfd_x(B2, mem_workspace, hx, sz, bflag);
+    cfd.filter_cfd_y(B2, mem_workspace, hy, sz, bflag);
+    cfd.filter_cfd_z(B2, mem_workspace, hz, sz, bflag);
+
+    // filter is applied, now we return
+    return;
+}

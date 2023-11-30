@@ -10,6 +10,9 @@
 
 #include "rk4em3.h"
 
+#include "compact_derivs.h"
+#include "parameters.h"
+
 namespace ode {
 namespace solver {
 
@@ -749,8 +752,8 @@ void RK4_EM3::performSingleIteration() {
             // em3rhs(m_uiUnzipVarRHS, (const double **)m_uiUnzipVar, offset,
             //        ptmin, ptmax, sz, bflag);
 
-            em3rhs_CFD(m_uiUnzipVarRHS, m_uiUnzipVar, offset, ptmin, ptmax,
-                           sz, bflag);
+            em3rhs_CFD(m_uiUnzipVarRHS, m_uiUnzipVar, offset, ptmin, ptmax, sz,
+                       bflag);
         }
 
 #ifdef DEBUG_RK_SOLVER
@@ -1148,6 +1151,10 @@ void RK4_EM3::rkSolve() {
             }
         }
 
+        if ((m_uiCurrentStep % em3::EM3_FILTER_FREQ) && (m_uiCurrentStep > 0)) {
+            applyFilter();
+        }
+
         if ((m_uiCurrentStep % em3::EM3_IO_OUTPUT_FREQ) == 0) {
 #ifdef RK_SOLVER_OVERLAP_COMM_AND_COMP
             unzipVars_async(m_uiPrevVar, m_uiUnzipVar);
@@ -1282,6 +1289,73 @@ void RK4_EM3::rkSolve() {
     }
 }
 
+void RK4_EM3::applyFilter() {
+    // if we're not filtering or applying the KO dissipation filtering in RHS,
+    // do nothing
+    if (em3::EM3_FILTER_TYPE == dendro_cfd::FilterType::FILT_NONE ||
+        em3::EM3_FILTER_TYPE == dendro_cfd::FilterType::FILT_KO_DISS) {
+        return;
+    }
+
+    // perform ghost exchange/unzipping because the filtering requires ghosts
+#ifdef RK_SOLVER_OVERLAP_COMM_AND_COMP
+    unzipVars_async(m_uiPrevVar, m_uiUnzipVar);
+#else
+    performGhostExchangeVars(m_uiPrevVar);
+    unzipVars(m_uiPrevVar, m_uiUnzipVar);
+#endif
+
+    // now we essentially do the RHS comp and filter all variables
+    if (m_uiMesh->isActive()) {
+        const std::vector<ot::Block> blkList = m_uiMesh->getLocalBlockList();
+
+        unsigned int offset;
+
+        double ptmin[3], ptmax[3];
+        unsigned int sz[3];
+        unsigned int bflag;
+        double dx, dy, dz;
+        const Point pt_min(em3::EM3_COMPD_MIN[0], em3::EM3_COMPD_MIN[1],
+                           em3::EM3_COMPD_MIN[2]);
+        const Point pt_max(em3::EM3_COMPD_MAX[0], em3::EM3_COMPD_MAX[1],
+                           em3::EM3_COMPD_MAX[2]);
+        const unsigned int PW = em3::EM3_PADDING_WIDTH;
+
+        for (unsigned int blk = 0; blk < blkList.size(); blk++) {
+            offset = blkList[blk].getOffset();
+            sz[0] = blkList[blk].getAllocationSzX();
+            sz[1] = blkList[blk].getAllocationSzY();
+            sz[2] = blkList[blk].getAllocationSzZ();
+
+            bflag = blkList[blk].getBlkNodeFlag();
+
+            dx = blkList[blk].computeDx(pt_min, pt_max);
+            dy = blkList[blk].computeDy(pt_min, pt_max);
+            dz = blkList[blk].computeDz(pt_min, pt_max);
+
+            ptmin[0] = GRIDX_TO_X(blkList[blk].getBlockNode().minX()) - PW * dx;
+            ptmin[1] = GRIDY_TO_Y(blkList[blk].getBlockNode().minY()) - PW * dy;
+            ptmin[2] = GRIDZ_TO_Z(blkList[blk].getBlockNode().minZ()) - PW * dz;
+
+            ptmax[0] = GRIDX_TO_X(blkList[blk].getBlockNode().maxX()) + PW * dx;
+            ptmax[1] = GRIDY_TO_Y(blkList[blk].getBlockNode().maxY()) + PW * dy;
+            ptmax[2] = GRIDZ_TO_Z(blkList[blk].getBlockNode().maxZ()) + PW * dz;
+
+            apply_filters(m_uiUnzipVar, offset, ptmin, ptmax, sz, bflag);
+        }
+
+        // then we need to zip it back up
+        zipVars(m_uiUnzipVar, m_uiPrevVar);
+    }
+
+    m_uiMesh->waitAll();
+
+    if (!m_uiMesh->getMPIRank()) {
+        std::cout << "\t\t:: " << BLU << "Applied filtering to the variables!"
+                  << NRM << "::" << std::endl;
+    }
+}
+
 void RK4_EM3::storeCheckPoint(const char *fNamePrefix) {
     if (m_uiMesh->isActive()) {
         unsigned int cpIndex;
@@ -1329,8 +1403,8 @@ void RK4_EM3::storeCheckPoint(const char *fNamePrefix) {
             checkPoint["DENDRO_RK45_NUM_VARS"] =
                 numVars;  // number of variables to restore.
             checkPoint["DENDRO_RK45_ACTIVE_COMM_SZ"] =
-                m_uiMesh
-                    ->getMPICommSize();  // (note that rank 0 is always active).
+                m_uiMesh->getMPICommSize();  // (note that rank 0 is always
+                                             // active).
 
             outfile << std::setw(4) << checkPoint << std::endl;
             outfile.close();

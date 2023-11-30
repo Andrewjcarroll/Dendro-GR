@@ -9,6 +9,8 @@
 
 #include "em3Utils.h"
 
+#include "parameters.h"
+
 namespace em3 {
 
 void readParamFile(const char* fName, MPI_Comm comm) {
@@ -75,12 +77,14 @@ void readParamFile(const char* fName, MPI_Comm comm) {
             em3::DISSIPATION_TYPE = parFile["DISSIPATION_TYPE"];
         };
 
-        if(parFile.find("EM3_DERIV_TYPE")!=parFile.end())
+        if (parFile.find("EM3_DERIV_TYPE") != parFile.end())
             temp_EM3_DERIV_TYPE = parFile["EM3_DERIV_TYPE"];
-        if(parFile.find("EM3_2ND_DERIV_TYPE")!=parFile.end())
+        if (parFile.find("EM3_2ND_DERIV_TYPE") != parFile.end())
             temp_EM3_2ND_DERIV_TYPE = parFile["EM3_2ND_DERIV_TYPE"];
-        if(parFile.find("EM3_FILTER_TYPE")!=parFile.end())
+        if (parFile.find("EM3_FILTER_TYPE") != parFile.end())
             temp_EM3_FILTER_TYPE = parFile["EM3_FILTER_TYPE"];
+        if (parFile.find("EM3_FILTER_FREQ") != parFile.end())
+            em3::EM3_FILTER_FREQ = parFile["EM3_FILTER_FREQ"];
 
         em3::EM3_ID_TYPE = parFile["EM3_ID_TYPE"];
         em3::EM3_ID_AMP1 = parFile["EM3_ID_AMP1"];
@@ -215,10 +219,13 @@ void readParamFile(const char* fName, MPI_Comm comm) {
     em3::EM3_DERIV_TYPE = static_cast<dendro_cfd::DerType>(temp_EM3_DERIV_TYPE);
 
     par::Mpi_Bcast(&temp_EM3_2ND_DERIV_TYPE, 1, 0, comm);
-    em3::EM3_2ND_DERIV_TYPE = static_cast<dendro_cfd::DerType2nd>(temp_EM3_2ND_DERIV_TYPE);
+    em3::EM3_2ND_DERIV_TYPE =
+        static_cast<dendro_cfd::DerType2nd>(temp_EM3_2ND_DERIV_TYPE);
 
     par::Mpi_Bcast(&temp_EM3_FILTER_TYPE, 1, 0, comm);
-    em3::EM3_FILTER_TYPE = static_cast<dendro_cfd::FilterType>(temp_EM3_FILTER_TYPE);
+    em3::EM3_FILTER_TYPE =
+        static_cast<dendro_cfd::FilterType>(temp_EM3_FILTER_TYPE);
+    par::Mpi_Bcast(&EM3_FILTER_FREQ, 1, 0, comm);
 
     par::Mpi_Bcast(&EM3_ID_TYPE, 1, 0, comm);
     par::Mpi_Bcast(&EM3_ID_AMP1, 1, 0, comm);
@@ -425,6 +432,15 @@ void dumpParamFile(std::ostream& sout, int root, MPI_Comm comm) {
         sout << em3::EM3_VTU_OUTPUT_EVOL_INDICES
                     [em3::EM3_NUM_EVOL_VARS_VTU_OUTPUT - 1]
              << "]" << NRM << std::endl;
+
+        sout << YLW << "\tEM3_DERIV_TYPE : " << em3::EM3_DERIV_TYPE << NRM
+             << std::endl;
+        sout << YLW << "\tEM3_2ND_DerIV_TYPE : " << em3::EM3_2ND_DERIV_TYPE
+             << NRM << std::endl;
+        sout << YLW << "\tEM3_FILTER_TYPE : " << em3::EM3_FILTER_TYPE << NRM
+             << std::endl;
+        sout << YLW << "\tEM3_FILTER_FREQ : " << em3::EM3_FILTER_FREQ << NRM
+             << std::endl;
 
 #ifdef EM3_USE_4TH_ORDER_DERIVS
         sout << "Using 4th order FD stencils. " << std::endl;
