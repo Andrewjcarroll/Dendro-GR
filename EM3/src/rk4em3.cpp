@@ -1151,7 +1151,8 @@ void RK4_EM3::rkSolve() {
             }
         }
 
-        if ((m_uiCurrentStep % em3::EM3_FILTER_FREQ) && (m_uiCurrentStep > 0)) {
+        if ((m_uiCurrentStep % em3::EM3_FILTER_FREQ) == 0 &&
+            (m_uiCurrentStep > 0)) {
             applyFilter();
         }
 
