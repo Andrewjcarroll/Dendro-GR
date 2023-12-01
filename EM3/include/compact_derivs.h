@@ -17,19 +17,90 @@
 #define INDEX_N2D(i, j, n) ((i) + (n) * (j))
 
 extern "C" {
-// LU decomposition of a general matrix
+/**
+ * @brief LU decomposition of a general matrix.
+ *
+ * This function performs LU decomposition of a general matrix. See the LAPACK
+ * documentation for more information.
+ *
+ * @param[in] n Number of rows of the matrix.
+ * @param[in] m Number of columns of the matrix.
+ * @param[in,out] P Matrix to be decomposed. On output, it contains the LU
+ * decomposition.
+ * @param[in] lda Leading dimension of the array P. Must be at least max(1, n).
+ * @param[out] IPIV Array of pivot indices representing the permutation matrix.
+ * @param[out] INFO INFO=0 indicates successful execution.
+ */
 void dgetrf_(int *n, int *m, double *P, int *lda, int *IPIV, int *INFO);
 
-// generate inverse of a matrix given its LU decomposition
+/**
+ * @brief Generates the inverse of a matrix given its LU decomposition.
+ *
+ * This function generates the inverse of a matrix based on its LU
+ * decomposition. See the LAPACK documentation for more information
+ *
+ * @param[in] N Order of the matrix.
+ * @param[in,out] A Matrix containing the LU decomposition. On output, it
+ * contains the inverse of the original matrix.
+ * @param[in] lda Leading dimension of the array A. Must be at least max(1, N).
+ * @param[in] IPIV Array of pivot indices representing the permutation matrix
+ * from the LU decomposition.
+ * @param[out] WORK Workspace array.
+ * @param[in] lwork Size of the WORK array. lwork >= max(1, N).
+ * @param[out] INFO INFO=0 indicates successful execution.
+ */
 void dgetri_(int *N, double *A, int *lda, int *IPIV, double *WORK, int *lwork,
              int *INFO);
 
-// multiplies two matrices C = alpha*A*B + beta*C
+/**
+ * @brief Multiplies two matrices C = alpha*A*B + beta*C.
+ *
+ * This function performs matrix multiplication: C = alpha*A*B + beta*C. See the
+ * LAPACK documentation for more information.
+ *
+ * @param[in] TA Indicates whether to transpose matrix A. 'N' for no transpose,
+ * 'T' for transpose.
+ * @param[in] TB Indicates whether to transpose matrix B. 'N' for no transpose,
+ * 'T' for transpose.
+ * @param[in] M Number of rows in matrices A and C.
+ * @param[in] N Number of columns in matrices B and C.
+ * @param[in] K Number of columns in matrix A and rows in matrix B.
+ * @param[in] ALPHA Scalar multiplier for matrix A*B.
+ * @param[in] A Matrix A with dimensions (LDA, K) if TA='N', (K, LDA) if TA='T'.
+ * @param[in] LDA Leading dimension of array A. Must be at least max(1, (TA='N')
+ * ? M : K).
+ * @param[in] B Matrix B with dimensions (LDB, N) if TB='N', (N, LDB) if TB='T'.
+ * @param[in] LDB Leading dimension of array B. Must be at least max(1, (TB='N')
+ * ? K : N).
+ * @param[in] BETA Scalar multiplier for matrix C.
+ * @param[in,out] C Matrix C with dimensions (LDC, N).
+ * @param[in] LDC Leading dimension of array C. Must be at least max(1, M).
+ */
 void dgemm_(char *TA, char *TB, int *M, int *N, int *K, double *ALPHA,
             double *A, int *LDA, double *B, int *LDB, double *BETA, double *C,
             int *LDC);
 
-// generic matrix vector multiplication.
+/**
+ * @brief Generic matrix-vector multiplication.
+ *
+ * This function performs matrix-vector multiplication: y = alpha*A*x + beta*y.
+ *
+ * @param[in] trans Indicates whether to transpose matrix A. 'N' for no
+ * transpose, 'T' for transpose.
+ * @param[in] m Number of rows in matrix A.
+ * @param[in] n Number of columns in matrix A.
+ * @param[in] alpha Scalar multiplier for matrix-vector product.
+ * @param[in] A Matrix A with dimensions (LDA, n) if trans='N', (m, LDA) if
+ * trans='T'.
+ * @param[in] lda Leading dimension of array A. Must be at least max(1,
+ * (trans='N') ? m : n).
+ * @param[in] x Vector x with at least (1+(n-1)*abs(incx)) elements if
+ * trans='N', (1+(m-1)*abs(incx)) elements if trans='T'.
+ * @param[in] incx Increment for the elements of vector x.
+ * @param[in] beta Scalar multiplier for vector y.
+ * @param[in,out] y Vector y with at least (1+(m-1)*abs(incy)) elements.
+ * @param[in] incy Increment for the elements of vector y.
+ */
 void dgemv_(char *trans, int *m, int *n, double *alpha, double *A, int *lda,
             double *x, int *incx, double *beta, double *y, int *incy);
 }
@@ -318,24 +389,90 @@ class CFDMethod2nd {
     }
 };
 
+/**
+ * @brief Prints the elements of a square matrix.
+ *
+ * @param[in] m Pointer to the first element of the square matrix.
+ * @param[in] n Size of ONE dimension of the matrix (i.e. n x n)
+ */
 void print_square_mat(double *m, const uint32_t n);
 
+/**
+ * @brief Determines what derivative type to use at edges.
+ *
+ * @param[in] derivtype The "main" derivative type.
+ * @param[in] boundary The type of boundary that should be considered.
+ */
 DerType getDerTypeForEdges(const DerType derivtype,
                            const BoundaryType boundary);
 
+/**
+ * @brief Determines what derivative type to use at edges (2nd order).
+ *
+ * @param[in] derivtype The "main" second-order derivative type.
+ * @param[in] boundary The type of boundary that should be considered.
+ */
 DerType2nd get2ndDerTypeForEdges(const DerType2nd derivtype,
                                  const BoundaryType boundary);
 
+/**
+ * @brief Builds matrices P and Q for a given derivative type.
+ *
+ * This function constructs matrices P and Q for a specified derivative type.
+ * These are then used to generate the R matrix in another function.
+ *
+ * @param[out] P Pointer to the first element of matrix P.
+ * @param[out] Q Pointer to the first element of matrix Q.
+ * @param[in] padding Padding that should be used around the matrices.
+ * @param[in] n Size of the square matrices (i.e. n x n).
+ * @param[in] derivtype Type of derivative to construct the matrices for.
+ * @param[in] is_left_edge Flag indicating if the operation is at the left edge.
+ * @param[in] is_right_edge Flag indicating if the operation is at the right
+ * edge.
+ */
 void buildPandQMatrices(double *P, double *Q, const uint32_t padding,
                         const uint32_t n, const DerType derivtype,
                         const bool is_left_edge = false,
                         const bool is_right_edge = false);
 
+/**
+ * @brief Builds matrices P and Q for a given second-order derivative type.
+ *
+ * This function constructs matrices P and Q for a specified second-order
+ * derivative type. These are then used to generate the R matrix in another
+ * function.
+ *
+ * @param[out] P Pointer to the first element of matrix P.
+ * @param[out] Q Pointer to the first element of matrix Q.
+ * @param[in] padding Padding that should be used around the matrices.
+ * @param[in] n Size of the square matrices (i.e. n x n).
+ * @param[in] derivtype Type of derivative to construct the matrices for.
+ * @param[in] is_left_edge Flag indicating if the operation is at the left edge.
+ * @param[in] is_right_edge Flag indicating if the operation is at the right
+ * edge.
+ */
 void buildPandQMatrices2ndOrder(double *P, double *Q, const uint32_t padding,
                                 const uint32_t n, const DerType2nd derivtype,
                                 const bool is_left_edge = false,
                                 const bool is_right_edge = false);
 
+/**
+ * @brief Builds matrices P and Q for a given filter type.
+ *
+ * This function constructs matrices P and Q for a specified filter type. These
+ * are then used to generate the R matrix in another function.
+ *
+ * @param[out] P Pointer to the first element of matrix P.
+ * @param[out] Q Pointer to the first element of matrix Q.
+ * @param[in] padding Padding that should be used around the matrices.
+ * @param[in] n Size of the square matrices (i.e. n x n).
+ * @param[in] filtertype Type of filter to construct the matrices for.
+ * @param[in] is_left_edge Flag indicating if the operation is at the left edge.
+ * @param[in] is_right_edge Flag indicating if the operation is at the right
+ * @param[in] kim_filt_kc Parameter for Kim filter to limit frequencies.
+ * @param[in] kim_filt_eps Parameter for Kim filter used in computation.
+ * edge.
+ */
 void buildPandQFilterMatrices(double *P, double *Q, const uint32_t padding,
                               const uint32_t n, const FilterType filtertype,
                               const double alpha, const bool bound_enable,
@@ -360,26 +497,42 @@ void calculateDerivMatrix(double *D, double *P, double *Q, const int n);
 
 void setArrToZero(double *Mat, const int n);
 
-/*
- Computes
-     C := alpha*op( A )*op( B ) + beta*C,
-*/
+/**
+ * @brief Computes the matrix-matrix multiplication: C := alpha * op(A) * op(B)
+ * + beta * C.
+ *
+ * This function is essentially just a wrapper function for dgemm_ that handles
+ * setting up the values properly for that function.
+ *
+ * @param[out] C Pointer to the first element of the resulting matrix C.
+ * @param[in] A Pointer to the first element of matrix A.
+ * @param[in] B Pointer to the first element of matrix B.
+ * @param[in] na Number of rows in matrix A.
+ * @param[in] nb Number of columns in matrix B.
+ */
 void mulMM(double *C, double *A, double *B, int na, int nb);
 
+/**
+ * The order in which we compute the various compact derivatives.
+ *
+ * These values are used to help differentiate (in the source code) which
+ * derivative or filter the iteration is currently on. This helps with
+ * conditionals. An end user doesn't need to know what these values are.
+ */
 enum CompactDerivValueOrder {
-    DERIV_NORM = 0,
-    DERIV_LEFT,
-    DERIV_RIGHT,
-    DERIV_LEFTRIGHT,
-    DERIV_2ND_NORM,
-    DERIV_2ND_LEFT,
-    DERIV_2ND_RIGHT,
-    DERIV_2ND_LEFTRIGHT,
-    FILT_NORM,
-    FILT_LEFT,
-    FILT_RIGHT,
-    FILT_LEFTRIGHT,
-    R_MAT_END
+    DERIV_NORM = 0,       ///< First-order derivative with no boundary handling
+    DERIV_LEFT,           ///< First-order derivative with left boundary
+    DERIV_RIGHT,          ///< First-order derivative with right boundary
+    DERIV_LEFTRIGHT,      ///< First-order derivative with left-right boundary
+    DERIV_2ND_NORM,       ///< Second-order derivative with no boundary handling
+    DERIV_2ND_LEFT,       ///< Second-order derivative with no left boundary
+    DERIV_2ND_RIGHT,      ///< Second-order derivative with no right boundary
+    DERIV_2ND_LEFTRIGHT,  ///< Second-order derivative with left-right boundary
+    FILT_NORM,            ///< The filter matrix with no boundary handling
+    FILT_LEFT,            ///< The filter matrix with left boundary
+    FILT_RIGHT,           ///< The filter matrix with right boundary
+    FILT_LEFTRIGHT,       ///< The filter matrix with left-right boundary
+    R_MAT_END             ///< Used to mark the end of the enum.
 };
 
 class CompactFiniteDiff {
