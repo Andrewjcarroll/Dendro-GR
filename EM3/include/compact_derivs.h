@@ -340,7 +340,9 @@ void buildPandQFilterMatrices(double *P, double *Q, const uint32_t padding,
                               const uint32_t n, const FilterType filtertype,
                               const double alpha, const bool bound_enable,
                               const bool is_left_edge = false,
-                              const bool is_right_edge = false);
+                              const bool is_right_edge = false,
+                              const double kim_filt_kc = 0.88,
+                              const double kim_filt_eps = 0.25);
 
 void buildMatrixLeft(double *P, double *Q, int *xib, const DerType dtype,
                      const int nghosts, const int n);
@@ -417,6 +419,8 @@ class CompactFiniteDiff {
     // TODO: make a method that can set these!
     double m_filt_alpha = 0.0;
     double m_filt_bound_enable = false;
+    double m_kim_filt_kc = 0.88;
+    double m_kim_filt_eps = 0.25;
 
    public:
     CompactFiniteDiff(const unsigned int dim_size,
@@ -440,6 +444,11 @@ class CompactFiniteDiff {
         } else {
             m_beta_filt = 0.0;
         }
+    }
+
+    void set_kim_params(double kc, double eps) {
+        m_kim_filt_kc = kc;
+        m_kim_filt_eps = eps;
     }
 
     void set_deriv_type(const DerType deriv_type) {

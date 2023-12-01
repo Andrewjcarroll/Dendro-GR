@@ -237,7 +237,8 @@ void CompactFiniteDiff::initialize_cfd_filter() {
 
         buildPandQFilterMatrices(P, Q, m_padding_size, m_curr_dim_size,
                                  m_filter_type, m_filt_alpha,
-                                 m_filt_bound_enable, left_b, right_b);
+                                 m_filt_bound_enable, left_b, right_b,
+                                 m_kim_filt_kc, m_kim_filt_eps);
 
 #ifdef PRINT_COMPACT_MATRICES
         std::cout << "\nP MATRIX no=" << ii << std::endl;
@@ -1603,8 +1604,9 @@ void buildPandQMatrices2ndOrder(double *P, double *Q, const uint32_t padding,
 void buildPandQFilterMatrices(double *P, double *Q, const uint32_t padding,
                               const uint32_t n, const FilterType filtertype,
                               const double alpha, const bool bound_enable,
-                              const bool is_left_edge,
-                              const bool is_right_edge) {
+                              const bool is_left_edge, const bool is_right_edge,
+                              const double kim_filt_kc,
+                              const double kim_filt_eps) {
     // NOTE: we're pretending that all of the "mpi" or "block" boundaries
     // are treated equally. We only need to account for physical "left" and
     // "right" edges
@@ -1673,7 +1675,7 @@ void buildPandQFilterMatrices(double *P, double *Q, const uint32_t padding,
     if (filtertype == FILT_KIM_6) {
         // build Kim4 P and Q
 
-        initializeKim6FilterPQ(tempP, tempQ, curr_n);
+        initializeKim6FilterPQ(tempP, tempQ, curr_n, kim_filt_kc, kim_filt_eps);
     } else if (filtertype == FILT_JT_6) {
         initializeJTFilterT6PQ(tempP, tempQ, curr_n, padding, alpha,
                                (is_left_edge || is_right_edge), is_left_edge,
