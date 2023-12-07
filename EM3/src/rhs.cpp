@@ -327,6 +327,7 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
     em3::timer::t_deriv.start();
 
     // TODO: make this a "every so often" kind of thing
+#if 0
     if (em3::EM3_FILTER_TYPE != FILT_KO_DISS) {
         // the internals of these functions will just return if no filtering is
         // set!
@@ -354,6 +355,7 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
         cfd.filter_cfd_y(B2, grad_0_E0, hy, sz, bflag);
         cfd.filter_cfd_z(B2, grad_0_E0, hz, sz, bflag);
     }
+#endif
 
     if (em3::EM3_DERIV_TYPE == CFD_NONE) {
         deriv_x(grad_0_E0, E0, hx, sz, bflag);
