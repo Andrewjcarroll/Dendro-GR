@@ -1,5 +1,9 @@
 project(EM3)
 
+
+set(EXTERNAL_LIB_HEADERS ${CMAKE_SOURCE_DIR}/libs/toml11)
+message(STATUS "${EXTERNAL_LIB_HEADERS}")
+
 # only EM3 options
 option(EM3_COMPUTE_CONSTRAINTS "Enable constraint equation computation" ON)
 option(EM3_USE_4TH_ORDER_DERIVS "4th order derivs" OFF)
@@ -95,6 +99,10 @@ add_executable(derivTesting ${SOURCE_FILES})
 target_include_directories(derivTesting PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_include_directories(derivTesting PRIVATE ${CMAKE_SOURCE_DIR}/dendrolib/include)
 target_include_directories(derivTesting PRIVATE ${GSL_INCLUDE_DIRS})
+
+# also the toml library with the git submodule
+target_include_directories(derivTesting PRIVATE ${EXTERNAL_LIB_HEADERS})
+
 target_link_libraries(derivTesting xsmm) # "-Wl,--wrap=dgemm_,--wrap=sgemm_ ${BLAS_LIBRARIES} $<TARGET_FILE:xsmm>")
 
 target_link_libraries(derivTesting dendro5 ${LAPACK_LIBRARIES} ${MPI_LIBRARIES} m)
