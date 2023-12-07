@@ -241,21 +241,21 @@ void em3rhs_CFD(double **unzipVarsRHS, double **uZipVars,
                 const unsigned int &offset, const double *pmin,
                 const double *pmax, const unsigned int *sz,
                 const unsigned int &bflag) {
-    double *const E0 = &uZipVars[VAR::U_E0][offset];
-    double *const E1 = &uZipVars[VAR::U_E1][offset];
-    double *const E2 = &uZipVars[VAR::U_E2][offset];
-    double *const B0 = &uZipVars[VAR::U_B0][offset];
-    double *const B1 = &uZipVars[VAR::U_B1][offset];
-    double *const B2 = &uZipVars[VAR::U_B2][offset];
+    double *E0 = &uZipVars[VAR::U_E0][offset];
+    double *E1 = &uZipVars[VAR::U_E1][offset];
+    double *E2 = &uZipVars[VAR::U_E2][offset];
+    double *B0 = &uZipVars[VAR::U_B0][offset];
+    double *B1 = &uZipVars[VAR::U_B1][offset];
+    double *B2 = &uZipVars[VAR::U_B2][offset];
     // const double *Grad_E0 = &uZipVars[VAR :: U_Grad_E0][offset];
     // const double *Grad_E1 = &uZipVars[VAR :: U_Grad_E1][offset];
     // const double *Grad_E2 = &uZipVars[VAR :: U_Grad_E2][offset];
-    double *const E_rhs0 = &unzipVarsRHS[VAR::U_E0][offset];
-    double *const E_rhs1 = &unzipVarsRHS[VAR::U_E1][offset];
-    double *const E_rhs2 = &unzipVarsRHS[VAR::U_E2][offset];
-    double *const B_rhs0 = &unzipVarsRHS[VAR::U_B0][offset];
-    double *const B_rhs1 = &unzipVarsRHS[VAR::U_B1][offset];
-    double *const B_rhs2 = &unzipVarsRHS[VAR::U_B2][offset];
+    double *E_rhs0 = &unzipVarsRHS[VAR::U_E0][offset];
+    double *E_rhs1 = &unzipVarsRHS[VAR::U_E1][offset];
+    double *E_rhs2 = &unzipVarsRHS[VAR::U_E2][offset];
+    double *B_rhs0 = &unzipVarsRHS[VAR::U_B0][offset];
+    double *B_rhs1 = &unzipVarsRHS[VAR::U_B1][offset];
+    double *B_rhs2 = &unzipVarsRHS[VAR::U_B2][offset];
     // double *E_Grad_rhs0 = &unzipVarsRHS[VAR::U_Grad_E0][offset];
     // double *E_Grad_rhs1 = &unzipVarsRHS[VAR::U_Grad_E1][offset];
     // double *E_Grad_rhs2 = &unzipVarsRHS[VAR::U_Grad_E2][offset];
