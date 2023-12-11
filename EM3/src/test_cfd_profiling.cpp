@@ -1146,7 +1146,7 @@ int main(int argc, char **argv) {
     double_t *u_dyy_true = new double_t[sz[0] * sz[1] * sz[2]]();
     double_t *u_dzz_true = new double_t[sz[0] * sz[1] * sz[2]]();
 
-    double_t deltas[3] = {0.02, 0.01, 0.01};
+    double_t deltas[3] = {0.0002, 0.0001, 0.0001};
 
     double_t corner[3] = {0.0, 0.0, 0.0};
     init_data(params::data_init, u_var, corner, sz, deltas, u_dx_true,

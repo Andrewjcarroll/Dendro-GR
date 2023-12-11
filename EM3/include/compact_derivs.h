@@ -685,12 +685,19 @@ class CompactFiniteDiff {
     // the actual derivative computation side of things
     void cfd_x(double *const Dxu, const double *const u, const double dx,
                const unsigned int *sz, unsigned bflag);
-    void cfd_x_solve(double *const Dxu, const double *const u, const double dx,
-                     const unsigned int *sz, unsigned bflag);
+    void cfd_x_lu_solve(double *const Dxu, const double *const u,
+                        const double dx, const unsigned int *sz,
+                        unsigned bflag);
     void cfd_y(double *const Dyu, const double *const u, const double dy,
                const unsigned int *sz, unsigned bflag);
+    void cfd_y_lu_solve(double *const Dyu, const double *const u,
+                        const double dy, const unsigned int *sz,
+                        unsigned bflag);
     void cfd_z(double *const Dzu, const double *const u, const double dz,
                const unsigned int *sz, unsigned bflag);
+    void cfd_z_lu_solve(double *const Dzu, const double *const u,
+                        const double dz, const unsigned int *sz,
+                        unsigned bflag);
 
     void cfd_xx(double *const Dxu, const double *const u, const double dx,
                 const unsigned int *sz, unsigned bflag);

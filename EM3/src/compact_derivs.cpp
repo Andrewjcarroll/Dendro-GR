@@ -401,9 +401,9 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
 #endif
 }
 
-void CompactFiniteDiff::cfd_x_solve(double *const Dxu, const double *const u,
-                                    const double dx, const unsigned int *sz,
-                                    unsigned bflag) {
+void CompactFiniteDiff::cfd_x_lu_solve(double *const Dxu, const double *const u,
+                                       const double dx, const unsigned int *sz,
+                                       unsigned bflag) {
     const unsigned int nx = sz[0];
     const unsigned int ny = sz[1];
     const unsigned int nz = sz[2];
@@ -499,7 +499,7 @@ void CompactFiniteDiff::cfd_x_solve(double *const Dxu, const double *const u,
                 &info);
 
         if (info != 0) {
-            std::cout << "ILLEGAL INFO: " << info << std::endl;
+            std::cout << "X_DERIV - ILLEGAL INFO: " << info << std::endl;
         }
 #endif
 
@@ -596,6 +596,111 @@ void CompactFiniteDiff::cfd_y(double *const Dyu, const double *const u,
 #endif
 }
 
+void CompactFiniteDiff::cfd_y_lu_solve(double *const Dyu, const double *const u,
+                                       const double dy, const unsigned int *sz,
+                                       unsigned bflag) {
+    const unsigned int nx = sz[0];
+    const unsigned int ny = sz[1];
+    const unsigned int nz = sz[2];
+
+    char TRANSA = 'N';
+    char TRANSB = 'T';
+
+    int info = 0;
+
+    int M = ny;
+    int N = nx;
+    int K = ny;
+
+    double alpha = 1.0 / dy;
+    double beta = 0.0;
+
+    double *u_curr_chunk = (double *)u;
+    double *du_curr_chunk = (double *)Dyu;
+
+    double *Q_mat_use = nullptr;
+    double *P_mat_use = nullptr;
+    int *ipiv_use = nullptr;
+    // to reduce the number of checks, check for failing bflag first
+    if (!(bflag & (1u << OCT_DIR_DOWN)) && !(bflag & (1u << OCT_DIR_UP))) {
+        P_mat_use = m_LUMatrices[CompactDerivValueOrder::DERIV_NORM];
+        Q_mat_use = m_BMatrices[CompactDerivValueOrder::DERIV_NORM];
+        ipiv_use = m_IPivotArrays[CompactDerivValueOrder::DERIV_NORM];
+    } else if ((bflag & (1u << OCT_DIR_DOWN)) &&
+               !(bflag & (1u << OCT_DIR_UP))) {
+        P_mat_use = m_LUMatrices[CompactDerivValueOrder::DERIV_LEFT];
+        Q_mat_use = m_BMatrices[CompactDerivValueOrder::DERIV_LEFT];
+        ipiv_use = m_IPivotArrays[CompactDerivValueOrder::DERIV_LEFT];
+    } else if (!(bflag & (1u << OCT_DIR_DOWN)) &&
+               (bflag & (1u << OCT_DIR_UP))) {
+        P_mat_use = m_LUMatrices[CompactDerivValueOrder::DERIV_RIGHT];
+        Q_mat_use = m_BMatrices[CompactDerivValueOrder::DERIV_RIGHT];
+        ipiv_use = m_IPivotArrays[CompactDerivValueOrder::DERIV_RIGHT];
+    } else {
+        P_mat_use = m_LUMatrices[CompactDerivValueOrder::DERIV_LEFTRIGHT];
+        Q_mat_use = m_BMatrices[CompactDerivValueOrder::DERIV_LEFTRIGHT];
+        ipiv_use = m_IPivotArrays[CompactDerivValueOrder::DERIV_LEFTRIGHT];
+    }
+
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+    typedef libxsmm_mmfunction<double> kernel_type;
+    // kernel_type kernel(LIBXSMM_GEMM_FLAGS(TRANSA, TRANSB), M, N, K, alpha,
+    // beta);
+    // TODO: figure out why an alpha of not 1 is breaking the kernel
+    kernel_type kernel(LIBXSMM_GEMM_FLAG_TRANS_B, M, N, K, 1.0, 0.0);
+    assert(kernel);
+#endif
+
+    for (unsigned int k = 0; k < nz; k++) {
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+        // thanks to memory layout, we can just... use this as a matrix
+        // so we can just grab the "matrix" of ny x nx for this one
+
+        kernel(R_mat_use, u_curr_chunk, m_du2d);
+
+#else
+
+        dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, Q_mat_use, &M,
+               u_curr_chunk, &K, &beta, m_du2d, &M);
+
+        // NOTE: now the output from m_du2d is 'N', so we don't need to update
+
+        // then we can solve the problem by using dgetrs_, which actually solves
+        // the problem more accurately our N is the size of ny, so we send in M
+        // and our NRHS is nx which is N.
+        dgetrs_(&TRANSA, &M, &N, P_mat_use, &M, ipiv_use, m_du2d, &M, &info);
+
+        if (info != 0) {
+            std::cout << "Y_DERIV - ILLEGAL INFO: " << info << std::endl;
+        }
+
+#endif
+        // TODO: see if there's a faster way to copy (i.e. SSE?)
+        // the data is transposed so it's much harder to just copy all at once
+        for (unsigned int i = 0; i < nx; i++) {
+            for (unsigned int j = 0; j < ny; j++) {
+                Dyu[INDEX_3D(i, j, k)] = m_du2d[j + i * ny];
+            }
+        }
+
+        // NOTE: this is probably faster on Intel, but for now we'll do the form
+        // above libxsmm_otrans(du_curr_chunk, m_du2d, sizeof(double), ny, nx,
+        // nx, ny);
+        // TODO: mkl's mkl_domatcopy might be even better!
+
+        // update u_curr_chunk
+        u_curr_chunk += nx * ny;
+        du_curr_chunk += nx * ny;
+    }
+
+    // NOTE: it is currently faster for these derivatives if we calculate them
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+    for (uint32_t ii = 0; ii < nx * ny * nz; ii++) {
+        Dyu[ii] *= 1 / dy;
+    }
+#endif
+}
+
 void CompactFiniteDiff::cfd_z(double *const Dzu, const double *const u,
                               const double dz, const unsigned int *sz,
                               unsigned bflag) {
@@ -659,6 +764,107 @@ void CompactFiniteDiff::cfd_z(double *const Dzu, const double *const u,
         // now we have a transposed matrix to send into dgemm_
         dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &M, m_u2d, &K,
                &beta, m_du2d, &M);
+
+        for (unsigned int i = 0; i < nx; i++) {
+            for (unsigned int k = 0; k < nz; k++) {
+                Dzu[INDEX_3D(i, j, k)] = m_du2d[k + i * nz];
+            }
+        }
+
+#endif
+    }
+
+    // NOTE: it is currently faster for these derivatives if we calculate them
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+    for (uint32_t ii = 0; ii < nx * ny * nz; ii++) {
+        Dzu[ii] *= 1 / dz;
+    }
+#endif
+}
+
+void CompactFiniteDiff::cfd_z_lu_solve(double *const Dzu, const double *const u,
+                                       const double dz, const unsigned int *sz,
+                                       unsigned bflag) {
+    const unsigned int nx = sz[0];
+    const unsigned int ny = sz[1];
+    const unsigned int nz = sz[2];
+
+    char TRANSA = 'N';
+    char TRANSB = 'T';
+    int info = 0;
+    int M = nz;
+    int K = nz;
+    double alpha = 1.0 / dz;
+    double beta = 0.0;
+
+    double *Q_mat_use = nullptr;
+    double *P_mat_use = nullptr;
+    int *ipiv_use = nullptr;
+    // to reduce the number of checks, check for failing bflag first
+    if (!(bflag & (1u << OCT_DIR_BACK)) && !(bflag & (1u << OCT_DIR_FRONT))) {
+        P_mat_use = m_LUMatrices[CompactDerivValueOrder::DERIV_NORM];
+        Q_mat_use = m_BMatrices[CompactDerivValueOrder::DERIV_NORM];
+        ipiv_use = m_IPivotArrays[CompactDerivValueOrder::DERIV_NORM];
+    } else if ((bflag & (1u << OCT_DIR_BACK)) &&
+               !(bflag & (1u << OCT_DIR_FRONT))) {
+        P_mat_use = m_LUMatrices[CompactDerivValueOrder::DERIV_LEFT];
+        Q_mat_use = m_BMatrices[CompactDerivValueOrder::DERIV_LEFT];
+        ipiv_use = m_IPivotArrays[CompactDerivValueOrder::DERIV_LEFT];
+    } else if (!(bflag & (1u << OCT_DIR_BACK)) &&
+               (bflag & (1u << OCT_DIR_FRONT))) {
+        P_mat_use = m_LUMatrices[CompactDerivValueOrder::DERIV_RIGHT];
+        Q_mat_use = m_BMatrices[CompactDerivValueOrder::DERIV_RIGHT];
+        ipiv_use = m_IPivotArrays[CompactDerivValueOrder::DERIV_RIGHT];
+    } else {
+        P_mat_use = m_LUMatrices[CompactDerivValueOrder::DERIV_LEFTRIGHT];
+        Q_mat_use = m_BMatrices[CompactDerivValueOrder::DERIV_LEFTRIGHT];
+        ipiv_use = m_IPivotArrays[CompactDerivValueOrder::DERIV_LEFTRIGHT];
+    }
+
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+    int N = nx;
+    typedef libxsmm_mmfunction<double> kernel_type;
+    // kernel_type kernel(LIBXSMM_GEMM_FLAGS(TRANSA, TRANSB), M, N, K, alpha,
+    // beta);
+    // TODO: figure out why an alpha of not 1 is breaking the kernel
+    kernel_type kernel(LIBXSMM_GEMM_FLAG_TRANS_B, M, N, K, 1.0, 0.0);
+    assert(kernel);
+#else
+    int N = nx;
+#endif
+
+    for (unsigned int j = 0; j < ny; j++) {
+        for (unsigned int k = 0; k < nz; k++) {
+            // copy the slice of X values over
+            std::copy_n(&u[INDEX_3D(0, j, k)], nx, &m_u2d[INDEX_N2D(0, k, nx)]);
+        }
+
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+        // now do the faster math multiplcation
+        kernel(R_mat_use, m_u2d, m_du2d);
+
+        // then we just stick it back in, but now in memory it's stored as z0,
+        // z1, z2,... then increases in x so we can't just do copy_n
+        for (unsigned int i = 0; i < nx; i++) {
+            for (unsigned int k = 0; k < nz; k++) {
+                Dzu[INDEX_3D(i, j, k)] = m_du2d[k + i * nz];
+            }
+        }
+
+#else
+
+        // now we have a transposed matrix to send into dgemm_
+        dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, Q_mat_use, &M, m_u2d, &K,
+               &beta, m_du2d, &M);
+
+        // then we can solve the problem by using dgetrs_, which actually solves
+        // the problem more accurately our N is the size of nz, so we send in M
+        // and our NRHS is nx which is N.
+        dgetrs_(&TRANSA, &M, &N, P_mat_use, &M, ipiv_use, m_du2d, &M, &info);
+
+        if (info != 0) {
+            std::cout << "Z_DERIV - ILLEGAL INFO: " << info << std::endl;
+        }
 
         for (unsigned int i = 0; i < nx; i++) {
             for (unsigned int k = 0; k < nz; k++) {
