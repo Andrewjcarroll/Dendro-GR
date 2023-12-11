@@ -103,6 +103,31 @@ void dgemm_(char *TA, char *TB, int *M, int *N, int *K, double *ALPHA,
  */
 void dgemv_(char *trans, int *m, int *n, double *alpha, double *A, int *lda,
             double *x, int *incx, double *beta, double *y, int *incy);
+
+/**
+ * @brief Solves a system of linear equations using LU factorization.
+ *
+ * This function solves a system of linear equations AX = B, where A is a square
+ * matrix, and X and B are matrices. It utilizes the LU factorization of A
+ * obtained by the dgetrf_ function.
+ *
+ * @param[in] trans Specifies the form of the system of equations. 'N' for AX =
+ * B and 'T' for A^T X = B.
+ * @param[in] n Order of the matrix A.
+ * @param[in] nrhs Number of right-hand sides, i.e., the number of columns in
+ * matrices B and X.
+ * @param[in] A Pointer to the first element of the LU-factored matrix A.
+ * @param[in] lda Leading dimension of array A. Must be at least max(1, n).
+ * @param[in] ipivot Array of pivot indices representing the permutation matrix
+ * from the LU factorization.
+ * @param[in,out] B Pointer to the first element of the right-hand side matrix
+ * B. On output, it contains the solution matrix X.
+ * @param[in] ldb Leading dimension of array B. Must be at least max(1, n).
+ * @param[out] info INFO=0 indicates successful execution. Otherwise, INFO
+ * specifies the leading minor of A that is singular.
+ */
+void dgetrs_(char *trans, int *n, int *nrhs, double *A, int *lda, int *ipivot,
+             double *B, int *ldb, int *info);
 }
 
 namespace dendro_cfd {
@@ -493,7 +518,8 @@ void buildMatrixLeft2nd(double *P, double *Q, int *xib, const DerType2nd dtype,
 void buildMatrixRight2nd(double *P, double *Q, int *xie, const DerType2nd dtype,
                          const int nghosts, const int n);
 
-void calculateDerivMatrix(double *D, double *P, double *Q, const int n);
+void calculateDerivMatrix(double *D, double *P, double *Q, const int n,
+                          int *ipiv = nullptr);
 
 void setArrToZero(double *Mat, const int n);
 
@@ -535,12 +561,23 @@ enum CompactDerivValueOrder {
     R_MAT_END             ///< Used to mark the end of the enum.
 };
 
+static const char *COMPACT_DERIV_VALUE_ORDER_STRS[] = {
+    "DERIV_NORM",      "DERIV_LEFT",          "DERIV_RIGHT",
+    "DERIV_LEFTRIGHT", "DERIV_2ND_NORM",      "DERIV_2ND_LEFT",
+    "DERIV_2ND_RIGHT", "DERIV_2ND_LEFTRIGHT", "FILT_NORM",
+    "FILT_LEFT",       "FILT_RIGHT",          "FILT_LEFTRIGHT",
+    "R_MAT_END"};
+
 class CompactFiniteDiff {
    private:
     // STORAGE VARIABLES USED FOR THE DIFFERENT DIMENSIONS
     // Assume that the blocks are all the same size (to start with)
 
     double *m_RMatrices[CompactDerivValueOrder::R_MAT_END] = {};
+
+    double *m_LUMatrices[CompactDerivValueOrder::R_MAT_END] = {};
+    double *m_BMatrices[CompactDerivValueOrder::R_MAT_END] = {};
+    int *m_IPivotArrays[CompactDerivValueOrder::R_MAT_END] = {};
 
     // TODO: we're going to want to store the filter and R variables as hash
     // maps
@@ -648,6 +685,8 @@ class CompactFiniteDiff {
     // the actual derivative computation side of things
     void cfd_x(double *const Dxu, const double *const u, const double dx,
                const unsigned int *sz, unsigned bflag);
+    void cfd_x_solve(double *const Dxu, const double *const u, const double dx,
+                     const unsigned int *sz, unsigned bflag);
     void cfd_y(double *const Dyu, const double *const u, const double dy,
                const unsigned int *sz, unsigned bflag);
     void cfd_z(double *const Dzu, const double *const u, const double dz,

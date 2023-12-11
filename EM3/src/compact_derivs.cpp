@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <stdexcept>
 
+#include "refel.h"
+
 // #define FASTER_DERIV_CALC_VIA_MATRIX_MULT
 // #define PRINT_COMPACT_MATRICES
 
@@ -72,6 +74,9 @@ void CompactFiniteDiff::initialize_cfd_storage() {
          ii < CompactDerivValueOrder::R_MAT_END;
          ii = static_cast<CompactDerivValueOrder>((size_t)ii + 1)) {
         m_RMatrices[ii] = new double[m_curr_dim_size * m_curr_dim_size]();
+        m_LUMatrices[ii] = new double[m_curr_dim_size * m_curr_dim_size]();
+        m_BMatrices[ii] = new double[m_curr_dim_size * m_curr_dim_size]();
+        m_IPivotArrays[ii] = new int[m_curr_dim_size];
     }
 
     // NOTE: the () syntax only works with C++ 11 or greater, may need to
@@ -86,8 +91,12 @@ void CompactFiniteDiff::initialize_cfd_storage() {
 
 void CompactFiniteDiff::initialize_cfd_matrix() {
     // temporary P and Q storage used in calculations
-    double *P = new double[m_curr_dim_size * m_curr_dim_size]();
-    double *Q = new double[m_curr_dim_size * m_curr_dim_size]();
+    // double *P = new double[m_curr_dim_size * m_curr_dim_size]();
+    // double *Q = new double[m_curr_dim_size * m_curr_dim_size]();
+
+    double *P;
+    double *Q;
+    int *ipiv = nullptr;
 
     // for each cfd matrix that needs to be initialized, we need the "base"
     // matrix, the "left edge" and the "right edge" to be safe.
@@ -99,6 +108,8 @@ void CompactFiniteDiff::initialize_cfd_matrix() {
     for (CompactDerivValueOrder ii = CompactDerivValueOrder::DERIV_NORM;
          ii < CompactDerivValueOrder::FILT_NORM;
          ii = static_cast<CompactDerivValueOrder>((size_t)ii + 1)) {
+        // PLACEHOLDER: this can eventually be used for specific logic, should
+        // be optimized out
         if (m_deriv_type == EXPLCT_FD_O4 &&
             (ii == CompactDerivValueOrder::DERIV_NORM ||
              ii == CompactDerivValueOrder::DERIV_LEFT ||
@@ -115,6 +126,11 @@ void CompactFiniteDiff::initialize_cfd_matrix() {
                     ii == CompactDerivValueOrder::DERIV_RIGHT ||
                     ii == CompactDerivValueOrder::DERIV_LEFTRIGHT)) {
         }
+
+        // update the P and Q pointers to our LU and B matrices
+        P = m_LUMatrices[ii];
+        Q = m_BMatrices[ii];
+        ipiv = m_IPivotArrays[ii];
 
         setArrToZero(P, m_curr_dim_size * m_curr_dim_size);
         setArrToZero(Q, m_curr_dim_size * m_curr_dim_size);
@@ -192,7 +208,7 @@ void CompactFiniteDiff::initialize_cfd_matrix() {
         print_square_mat(Q, m_curr_dim_size);
 #endif
 
-        calculateDerivMatrix(m_RMatrices[ii], P, Q, m_curr_dim_size);
+        calculateDerivMatrix(m_RMatrices[ii], P, Q, m_curr_dim_size, ipiv);
 
 #ifdef PRINT_COMPACT_MATRICES
         std::cout << "\nDERIV MATRIX no=" << ii << std::endl;
@@ -200,8 +216,26 @@ void CompactFiniteDiff::initialize_cfd_matrix() {
 #endif
     }
 
-    delete[] P;
-    delete[] Q;
+    // delete[] P;
+    // delete[] Q;
+    //
+    //
+
+    for (CompactDerivValueOrder ii = CompactDerivValueOrder::DERIV_NORM;
+         ii < CompactDerivValueOrder::FILT_NORM;
+         ii = static_cast<CompactDerivValueOrder>((size_t)ii + 1)) {
+        std::cout << "ON MATRIX: " << COMPACT_DERIV_VALUE_ORDER_STRS[ii]
+                  << std::endl;
+        std::cout << "PRINTING P MATRIX:" << std::endl;
+        print_square_mat(m_LUMatrices[ii], m_curr_dim_size);
+
+        std::cout << "PRINTING PIVOT ARRAY:" << std::endl;
+        printArray_1D(m_IPivotArrays[ii], m_curr_dim_size);
+
+        std::cout << "PRINTING THE Q MATRIX: " << std::endl;
+        print_square_mat(m_BMatrices[ii], m_curr_dim_size);
+        std::cout << std::endl;
+    }
 }
 
 void CompactFiniteDiff::initialize_cfd_filter() {
@@ -212,9 +246,9 @@ void CompactFiniteDiff::initialize_cfd_filter() {
 
     // IMPORTANT: SET THE BETA PARAMETER BASED ON THE FILTER TYPE
     // NOTE: the use of this parameter will depend on if we are *adding* the
+    // beta = 1.0, while JT needs beta = 0.0. 0.0 is the default (defined in
     // filter to the results or not. I.e., the Kim filters calculate the
     // *difference*, while the JT filters calculate the results. So, KIM needs
-    // beta = 1.0, while JT needs beta = 0.0. 0.0 is the default (defined in
     // compact_derivs.h)!
     if (m_filter_type == FilterType::FILT_KIM_6) {
         m_beta_filt = 1.0;
@@ -270,6 +304,9 @@ void CompactFiniteDiff::delete_cfd_matrices() {
          ii < CompactDerivValueOrder::R_MAT_END;
          ii = static_cast<CompactDerivValueOrder>((size_t)ii + 1)) {
         delete[] m_RMatrices[ii];
+        delete[] m_LUMatrices[ii];
+        delete[] m_BMatrices[ii];
+        delete[] m_IPivotArrays[ii];
     }
 }
 
@@ -350,6 +387,120 @@ void CompactFiniteDiff::cfd_x(double *const Dxu, const double *const u,
         dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, R_mat_use, &LDA,
                u_curr_chunk, &LDB, &beta, du_curr_chunk, &LDC);
 
+#endif
+
+        u_curr_chunk += nx * ny;
+        du_curr_chunk += nx * ny;
+    }
+
+    // TODO: investigate why the kernel won't take 1/dx as its alpha
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+    for (uint32_t ii = 0; ii < nx * ny * nz; ii++) {
+        Dxu[ii] *= 1 / dx;
+    }
+#endif
+}
+
+void CompactFiniteDiff::cfd_x_solve(double *const Dxu, const double *const u,
+                                    const double dx, const unsigned int *sz,
+                                    unsigned bflag) {
+    const unsigned int nx = sz[0];
+    const unsigned int ny = sz[1];
+    const unsigned int nz = sz[2];
+
+    // std::cout << "Nx, ny, nz: " << nx << " " << ny << " " << nz << std::endl;
+
+    char TRANSA = 'N';
+    char TRANSB = 'N';
+
+    int info = 0;
+
+    int M = nx;
+    int N = ny;
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+    const double alpha = 1.0 / dx;
+#else
+    double alpha = 1.0 / dx;
+#endif
+    int K = nx;
+
+    // NOTE: LDA, LDB, and LDC should be nx, ny, and nz
+    // TODO: fix for non-square sizes
+    int LDA = nx;
+    int LDB = ny;
+    int LDC = nx;
+
+    double *u_curr_chunk = (double *)u;
+    double *du_curr_chunk = (double *)Dxu;
+
+    double beta = 0.0;
+
+    double *P_mat_use = nullptr;
+    double *Q_mat_use = nullptr;
+    int *ipiv_use = nullptr;
+
+    // to reduce the number of checks, check for failing bflag first
+    if (!(bflag & (1u << OCT_DIR_LEFT)) && !(bflag & (1u << OCT_DIR_RIGHT))) {
+        P_mat_use = m_LUMatrices[CompactDerivValueOrder::DERIV_NORM];
+        Q_mat_use = m_BMatrices[CompactDerivValueOrder::DERIV_NORM];
+        ipiv_use = m_IPivotArrays[CompactDerivValueOrder::DERIV_NORM];
+    } else if ((bflag & (1u << OCT_DIR_LEFT)) &&
+               !(bflag & (1u << OCT_DIR_RIGHT))) {
+        P_mat_use = m_LUMatrices[CompactDerivValueOrder::DERIV_LEFT];
+        Q_mat_use = m_BMatrices[CompactDerivValueOrder::DERIV_LEFT];
+        ipiv_use = m_IPivotArrays[CompactDerivValueOrder::DERIV_LEFT];
+    } else if (!(bflag & (1u << OCT_DIR_LEFT)) &&
+               (bflag & (1u << OCT_DIR_RIGHT))) {
+        P_mat_use = m_LUMatrices[CompactDerivValueOrder::DERIV_RIGHT];
+        Q_mat_use = m_BMatrices[CompactDerivValueOrder::DERIV_RIGHT];
+        ipiv_use = m_IPivotArrays[CompactDerivValueOrder::DERIV_RIGHT];
+    } else {
+        P_mat_use = m_LUMatrices[CompactDerivValueOrder::DERIV_LEFTRIGHT];
+        Q_mat_use = m_BMatrices[CompactDerivValueOrder::DERIV_LEFTRIGHT];
+        ipiv_use = m_IPivotArrays[CompactDerivValueOrder::DERIV_LEFTRIGHT];
+    }
+
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+    typedef libxsmm_mmfunction<double> kernel_type;
+    // kernel_type kernel(LIBXSMM_GEMM_FLAGS(TRANSA, TRANSB), M, N, K, alpha,
+    // beta);
+    // TODO: figure out why an alpha of not 1 is breaking the kernel
+    kernel_type kernel(LIBXSMM_GEMM_FLAG_NONE, M, N, K, 1.0, 0.0);
+    assert(kernel);
+#endif
+
+    // const libxsmm_mmfunction<double, double, LIBXSMM_PREFETCH_AUTO>
+    // xmm(LIBXSMM_GEMM_FLAGS(TRANSA, TRANSB), M, N, K, LDA, LDB, LDC, alpha,
+    // beta);
+
+    for (unsigned int k = 0; k < nz; k++) {
+#ifdef FASTER_DERIV_CALC_VIA_MATRIX_MULT
+        // N = ny;
+        // thanks to memory layout, we can just... use this as a matrix
+        // so we can just grab the "matrix" of ny x nx for this one
+
+        // performs C_mn = alpha * A_mk * B_kn + beta * C_mn
+
+        // for the x_der case, m = k = nx
+
+        kernel(R_mat_use, u_curr_chunk, du_curr_chunk);
+
+#else
+
+        // start by multiplying the input by the Q matrix to create our "b" set
+        // of vectors
+        dgemm_(&TRANSA, &TRANSB, &M, &N, &K, &alpha, Q_mat_use, &LDA,
+               u_curr_chunk, &LDB, &beta, du_curr_chunk, &LDC);
+
+        // then we can solve the problem by using dgetrs_, which actually solves
+        // the problem more accurately our N is the size of nx, so we send in M
+        // and our NRHS is ny which is N.
+        dgetrs_(&TRANSA, &M, &N, P_mat_use, &LDA, ipiv_use, du_curr_chunk, &LDB,
+                &info);
+
+        if (info != 0) {
+            std::cout << "ILLEGAL INFO: " << info << std::endl;
+        }
 #endif
 
         u_curr_chunk += nx * ny;
@@ -1740,16 +1891,32 @@ void buildPandQFilterMatrices(double *P, double *Q, const uint32_t padding,
     // so we don't need to delete it unless we're dealing with left/right edges
 }
 
-void calculateDerivMatrix(double *D, double *P, double *Q, const int n) {
-    int *ipiv = new int[n];
+void calculateDerivMatrix(double *D, double *P, double *Q, const int n,
+                          int *ipiv) {
+    bool ipiv_was_null = false;
+    if (ipiv == nullptr) {
+        ipiv = new int[n];
+        ipiv_was_null = true;
+    }
 
     int info;
     int nx = n;
 
+    // std::cout << "PRINTING P MATRIX" << std::endl;
+    // print_square_mat(P, n);
+
     dgetrf_(&nx, &nx, P, &nx, ipiv, &info);
 
+    // std::cout << "PRINTING UPDATED P MATRIX AFTER LU CALC" << std::endl;
+    // print_square_mat(P, n);
+    //
+    // std::cout << std::endl << std::endl;
+
     if (info != 0) {
-        delete[] ipiv;
+        if (ipiv_was_null) {
+            delete[] ipiv;
+            ipiv = nullptr;
+        }
         throw std::runtime_error("LU factorization failed: info=" +
                                  std::to_string(info));
     }
@@ -1765,7 +1932,10 @@ void calculateDerivMatrix(double *D, double *P, double *Q, const int n) {
     dgetri_(&nx, Pinv, &nx, ipiv, work, &lwork, &info);
 
     if (info != 0) {
-        delete[] ipiv;
+        if (ipiv_was_null) {
+            delete[] ipiv;
+            ipiv = nullptr;
+        }
         delete[] Pinv;
         delete[] work;
         throw std::runtime_error("Matrix inversion failed: info=" +
@@ -1779,7 +1949,10 @@ void calculateDerivMatrix(double *D, double *P, double *Q, const int n) {
 
     mulMM(D, Pinv, Q, n, n);
 
-    delete[] ipiv;
+    if (ipiv_was_null) {
+        delete[] ipiv;
+        ipiv = nullptr;
+    }
     delete[] Pinv;
     delete[] work;
 }
