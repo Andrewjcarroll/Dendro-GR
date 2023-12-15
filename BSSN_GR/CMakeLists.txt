@@ -352,6 +352,9 @@ target_include_directories(bssn_lib PRIVATE ${MPI_INCLUDE_PATH})
 target_include_directories(bssn_lib PRIVATE ${GSL_INCLUDE_DIRS})
 target_include_directories(bssn_lib PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_include_directories(bssn_lib PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/scripts)
+# if we're using the Git Functionality
+
+target_include_directories(bssn_lib PRIVATE ${CHECK_GIT_INCLUDE_PATH})
 
 add_executable(rhscpu_test cuda/src/rhs_test.cpp)
 target_include_directories(rhscpu_test PRIVATE ${CMAKE_SOURCE_DIR}/dendrolib/include)
@@ -369,6 +372,7 @@ target_include_directories(rhscpu_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cuda/
 target_include_directories(rhscpu_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/scripts)
 target_link_libraries(rhscpu_test bssn_lib dendro5 ${LAPACK_LIBRARIES} ${MPI_LIBRARIES} ${GSL_LIBRARIES} m)
 
+target_include_directories(rhscpu_test PRIVATE ${CHECK_GIT_INCLUDE_PATH})
 #add_library(had_rhs STATIC src/hadrhs.F90)
 
 set(SOURCE_FILES src/bssngr_main.cpp include/gr.h src/bssnCtx.cpp ${BSSN_INC} ${BSSN_SRC} ${CUDA_GR_INCLUDE_H} ${CUDA_GR_SRC_CPP})
@@ -391,7 +395,7 @@ if(WITH_CUDA)
     target_link_libraries(bssnSolver bssn_cuda)
     target_link_libraries(bssnSolver ${CUDA_LIBRARIES})
 endif()
-target_link_libraries(bssnSolver dendro5 ${LAPACK_LIBRARIES} ${MPI_LIBRARIES} ${GSL_LIBRARIES} m)
+target_link_libraries(bssnSolver dendro5 ${LAPACK_LIBRARIES} ${MPI_LIBRARIES} ${GSL_LIBRARIES} m dendro_git_version_and_date)
 
 add_executable(bssnSolverCtx src/bssngr_main.cpp src/bssnCtx.cpp)
 target_include_directories(bssnSolverCtx PRIVATE ${CMAKE_SOURCE_DIR}/dendrolib/include)
@@ -411,7 +415,9 @@ target_include_directories(bssnSolverCtx PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cud
 target_include_directories(bssnSolverCtx PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/scripts)
 target_include_directories(bssnSolverCtx PRIVATE ${CUDA_INCLUDE_DIRS})
 target_link_libraries(bssnSolverCtx bssn_lib dendro5 ${CUDA_LIBRARIES})
-target_link_libraries(bssnSolverCtx ${LAPACK_LIBRARIES} ${MPI_LIBRARIES} ${GSL_LIBRARIES} m)
+#target_include_directories(bssnSolverCtx PRIVATE${CHECK_GIT_INCLUDE_PATH})
+target_link_libraries(bssnSolverCtx ${LAPACK_LIBRARIES} ${MPI_LIBRARIES} ${GSL_LIBRARIES} m dendro_git_version_and_date)
+
 
 # set(SOURCE_FILES src/gr_scaling.cpp include/gr.h ${BSSN_INC} ${BSSN_SRC} ${CUDA_GR_INCLUDE_H} ${CUDA_GR_SRC_CPP})
 # add_executable(bssnScalingTest ${SOURCE_FILES})
@@ -453,6 +459,7 @@ target_include_directories(bssnWAMRTest PRIVATE ${CMAKE_SOURCE_DIR}/dendrolib/IO
 target_include_directories(bssnWAMRTest PRIVATE ${MPI_INCLUDE_PATH})
 target_include_directories(bssnWAMRTest PRIVATE ${GSL_INCLUDE_DIRS})
 
+target_include_directories(bssnWAMRTest PRIVATE ${CHECK_GIT_INCLUDE_PATH})
 if(WITH_CUDA)
     target_include_directories(bssnWAMRTest PRIVATE ${CUDA_INCLUDE_DIRS})
     target_link_libraries(bssnWAMRTest bssn_cuda)
@@ -503,11 +510,14 @@ target_include_directories(checkDerivs PRIVATE ${CMAKE_SOURCE_DIR}/dendrolib/IO/
 target_include_directories(checkDerivs PRIVATE ${MPI_INCLUDE_PATH})
 target_include_directories(checkDerivs PRIVATE ${GSL_INCLUDE_DIRS})
 if(WITH_CUDA)
+
+target_include_directories(checkDerivs PRIVATE ${CHECK_GIT_INCLUDE_PATH})
     target_include_directories(checkDerivs PRIVATE ${CUDA_INCLUDE_DIRS})
     target_link_libraries(checkDerivs bssn_cuda)
     target_link_libraries(checkDerivs ${CUDA_LIBRARIES})
 endif()
 target_link_libraries(checkDerivs dendro5 ${LAPACK_LIBRARIES} ${MPI_LIBRARIES} ${GSL_LIBRARIES} m)
+
 
 # if(WITH_CUDA)
 #     set(SOURCE_FILES cuda_gr/src/gpuBSSNExample.cpp ${BSSN_INC} ${BSSN_SRC} ${CUDA_GR_INCLUDE_H} ${CUDA_GR_SRC_CPP})
@@ -606,6 +616,8 @@ target_include_directories(zipUnzipTest PRIVATE ${CMAKE_SOURCE_DIR}/dendrolib/IO
 target_include_directories(zipUnzipTest PRIVATE ${CMAKE_SOURCE_DIR}/dendrolib/IO/zlib/inc)
 target_include_directories(zipUnzipTest PRIVATE ${MPI_INCLUDE_PATH})
 target_include_directories(zipUnzipTest PRIVATE ${GSL_INCLUDE_DIRS})
+
+target_include_directories(zipUnzipTest PRIVATE ${CHECK_GIT_INCLUDE_PATH})
 
 if(WITH_CUDA)
     target_include_directories(zipUnzipTest PRIVATE ${CUDA_INCLUDE_DIRS})
