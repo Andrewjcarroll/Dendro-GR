@@ -353,7 +353,7 @@ target_include_directories(bssn_lib PRIVATE ${GSL_INCLUDE_DIRS})
 target_include_directories(bssn_lib PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_include_directories(bssn_lib PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/scripts)
 # if we're using the Git Functionality
-
+#Added a git version flag marker
 target_include_directories(bssn_lib PRIVATE ${CHECK_GIT_INCLUDE_PATH})
 
 add_executable(rhscpu_test cuda/src/rhs_test.cpp)
