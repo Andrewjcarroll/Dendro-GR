@@ -210,19 +210,6 @@ void bssnrhs(double **unzipVarsRHS, const double **uZipVars,
                 //               << " (t = " << bssn::BSSN_CURRENT_RK_COORD_TIME
                 //               << ")" << std::endl;
                 // }
-                double det_gtd = gt0[pp] * (gt1[pp] * gt5[pp] - gt4[pp] * gt4[pp])
-                - gt1[pp] * (gt1[pp] * gt5[pp] - gt2[pp] * gt4[pp])
-                + gt2[pp] * (gt1[pp] * gt4[pp] - gt2[pp] * gt3[pp]);
-
-                if (det_gtd < -0.000001) {
-                std::cout << "metric determinant is negative at " << det_gtd << std::endl;
-                std::cout << "[FatalError] - The determinant is negative at (" << x << ", "
-                << y << ", " << z << ") : " << det_gtd
-                << " - step: " << bssn::BSSN_CURRENT_RK_STEP
-                << " (t = " << bssn::BSSN_CURRENT_RK_COORD_TIME
-                << ")" << std::endl;
-                exit(0);
-                }
 
                 #ifdef USE_ROCHESTER_GAUGE
                     #pragma message("BSSN: using rochester gauge")
