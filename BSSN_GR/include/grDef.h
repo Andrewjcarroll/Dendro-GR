@@ -30,51 +30,26 @@
 // type of the rk method.
 enum RKType { RK3, RK4, RK45 };
 
-namespace bssn {
+namespace bssn
+{
+    /**@brief BSSN evolution variables*/
+    enum VAR {U_ALPHA=0,U_CHI,U_K,U_GT0,U_GT1,U_GT2,U_BETA0,U_BETA1,U_BETA2,U_B0,U_B1,U_B2,U_SYMGT0,U_SYMGT1,U_SYMGT2,U_SYMGT3,U_SYMGT4,U_SYMGT5,U_SYMAT0,U_SYMAT1,U_SYMAT2,U_SYMAT3,U_SYMAT4,U_SYMAT5};
 
-enum VAR {
-    U_ALPHA = 0,
-    U_CHI,
-    U_K,
-    U_GT0,
-    U_GT1,
-    U_GT2,
-    U_BETA0,
-    U_BETA1,
-    U_BETA2,
-    U_B0,
-    U_B1,
-    U_B2,
-    U_SYMGT0,
-    U_SYMGT1,
-    U_SYMGT2,
-    U_SYMGT3,
-    U_SYMGT4,
-    U_SYMGT5,
-    U_SYMAT0,
-    U_SYMAT1,
-    U_SYMAT2,
-    U_SYMAT3,
-    U_SYMAT4,
-    U_SYMAT5
-};
-
-// enum VAR_PSI4 {C_PSI4_REAL, C_PSI4_IMG};
-enum VAR_CONSTRAINT {
-    C_HAM = 0,
-    C_MOM0,
-    C_MOM1,
-    C_MOM2,
-    C_PSI4_REAL,
-    C_PSI4_IMG
-};
+    /**
+     * @brief BSSN constraint variables
+     * C_HAM - Hamiltonian constraint
+     * C_MOM - Momentum constraint x, y, z
+     * C_PSI4_REAL - real part of PSI4 scalar
+     * C_PSI4_IMG  - imaginary part of PSI4 scalar
+     */
+    enum VAR_CONSTRAINT {C_HAM=0, C_MOM0, C_MOM1, C_MOM2, C_PSI4_REAL, C_PSI4_IMG};
 
 static const char* BSSN_VAR_NAMES[] = {
     "U_ALPHA",  "U_CHI",    "U_K",      "U_GT0",    "U_GT1",    "U_GT2",
     "U_BETA0",  "U_BETA1",  "U_BETA2",  "U_B0",     "U_B1",     "U_B2",
     "U_SYMGT0", "U_SYMGT1", "U_SYMGT2", "U_SYMGT3", "U_SYMGT4", "U_SYMGT5",
     "U_SYMAT0", "U_SYMAT1", "U_SYMAT2", "U_SYMAT3", "U_SYMAT4", "U_SYMAT5"};
-
+    
 static const char* BSSN_CONSTRAINT_VAR_NAMES[] = {
     "C_HAM", "C_MOM0", "C_MOM1", "C_MOM2", "C_PSI4_REAL", "C_PSI4_IMG"};
 
