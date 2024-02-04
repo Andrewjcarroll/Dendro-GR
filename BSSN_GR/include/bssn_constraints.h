@@ -14,6 +14,7 @@ using namespace bssn;
  *----------------------------------------------------------------------*/
 inline void enforce_bssn_constraints(double **uiVar, unsigned int node)
 {
+    
     const double one_third = 1.0 / 3.0;
     double gtd[3][3], Atd[3][3];
 
@@ -36,6 +37,50 @@ inline void enforce_bssn_constraints(double **uiVar, unsigned int node)
     Atd[2][0] = Atd[0][2];
     Atd[2][1] = Atd[1][2];
     Atd[2][2] = uiVar[VAR::U_SYMAT5][node];
+
+    double alpha = uiVar[VAR::U_ALPHA][node];
+    double chi = uiVar[VAR::U_CHI][node];
+    double K = uiVar[VAR::U_CHI][node];
+    double beta0 = uiVar[VAR::U_BETA0][node];
+    double beta1 = uiVar[VAR::U_BETA1][node];
+    double beta2 = uiVar[VAR::U_BETA2][node];
+    double  Gt0 = uiVar[VAR::U_GT0][node];
+    double  Gt1 = uiVar[VAR::U_GT1][node];
+    double  Gt2 = uiVar[VAR::U_GT2][node];
+    double  B0 = uiVar[VAR::U_B0][node];
+    double  B1 = uiVar[VAR::U_B1][node];
+    double  B2 = uiVar[VAR::U_B2][node];
+
+
+
+     //Debugging code for Teukolsky:
+    if (std::isnan(alpha)) std::cout << "alpha is NaN "<< std::endl;
+    if (std::isnan(chi)) std::cout << "chi is NaN "<< std::endl;
+    if (std::isnan(K)) std::cout << "K is NaN "<< std::endl;
+    if (std::isnan(gtd[0][0])) std::cout << "gt0 is NaN "<< std::endl;
+    if (std::isnan(gtd[0][1])) std::cout << "gt1 is NaN "<< std::endl;
+    if (std::isnan(gtd[0][2])) std::cout << "gt2 is NaN "<< std::endl;
+    if (std::isnan(gtd[1][1])) std::cout << "gt3 is NaN "<< std::endl;
+    if (std::isnan(gtd[1][2])) std::cout << "gt4 is NaN "<< std::endl;
+    if (std::isnan(gtd[2][2])) std::cout << "gt5 is NaN "<< std::endl;
+    if (std::isnan(beta0)) std::cout << "beta0 is NaN "<< std::endl;
+    if (std::isnan(beta1)) std::cout << "beta1 is NaN "<< std::endl;
+    if (std::isnan(beta2)) std::cout << "beta2 is NaN "<< std::endl;
+    if (std::isnan(Atd[0][0])) std::cout << "At0 is NaN "<< std::endl;
+    if (std::isnan(Atd[0][1])) std::cout << "At1 is NaN "<< std::endl;
+    if (std::isnan(Atd[0][2])) std::cout << "At2 is NaN "<< std::endl;
+    if (std::isnan(Atd[1][1])) std::cout << "At3 is NaN "<< std::endl;
+    if (std::isnan(Atd[1][2])) std::cout << "At4 is NaN "<< std::endl;
+    if (std::isnan(Atd[2][2])) std::cout << "At5 is NaN "<< std::endl;
+    if (std::isnan(Gt0)) std::cout << "Gt0 is NaN "<< std::endl;
+    if (std::isnan(Gt1)) std::cout << "Gt1 is NaN "<< std::endl;
+    if (std::isnan(Gt2)) std::cout << "Gt2 is NaN "<< std::endl;
+    if (std::isnan(B0)) std::cout << "B0 is NaN "<< std::endl;
+    if (std::isnan(B1)) std::cout << "B1 is NaN "<< std::endl;
+    if (std::isnan(B2)) std::cout << "B2 is NaN "<< std::endl;
+                //exit(0);
+
+
 
     double det_gtd  =  gtd[0][0]*( gtd[1][1]*gtd[2][2] - gtd[1][2]*gtd[1][2])
                     -  gtd[0][1]*gtd[0][1]*gtd[2][2]
