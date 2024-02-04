@@ -89,12 +89,12 @@ inline void enforce_bssn_constraints(double **uiVar, unsigned int node)
 
     if (det_gtd < 0.0) {
         std::cout<<"metric determinent is negative "<<det_gtd<<std::endl;
-        exit(0);
+        //exit(0);
         /* FIXME What to do here? The metric is not physical. Do we reset the metric to be flat? */
-        gtd[0][0] = 1.0; gtd[0][1] = 0.0; gtd[0][2] = 0.0;
-        gtd[1][0] = 0.0; gtd[1][1] = 1.0; gtd[1][2] = 0.0;
-        gtd[2][0] = 0.0; gtd[2][1] = 0.0; gtd[2][2] = 1.0;
-        det_gtd = 1.0;
+        // gtd[0][0] = 1.0; gtd[0][1] = 0.0; gtd[0][2] = 0.0;
+        // gtd[1][0] = 0.0; gtd[1][1] = 1.0; gtd[1][2] = 0.0;
+        // gtd[2][0] = 0.0; gtd[2][1] = 0.0; gtd[2][2] = 1.0;
+        // det_gtd = 1.0;
     }
     double det_gtd_to_neg_third = 1.0 / pow(det_gtd, one_third);
 
@@ -123,7 +123,7 @@ inline void enforce_bssn_constraints(double **uiVar, unsigned int node)
         std::cout<<"      gtd(2,3)="<<gtd[1][2]<<std::endl;
         std::cout<<"      gtd(3,3)="<<gtd[2][2]<<std::endl;
         
-        exit(0);
+        //exit(0);
         
     }
 
@@ -173,7 +173,7 @@ inline void enforce_bssn_constraints(double **uiVar, unsigned int node)
         std::cout<<"      Atd(2,3)="<<Atd[1][2]<<std::endl;
         std::cout<<"      Atd(3,3)="<<Atd[2][2]<<std::endl;
         
-        exit(0);
+       // exit(0);
     }
 
 
@@ -214,6 +214,6 @@ inline void enforce_bssn_constraints(double **uiVar, unsigned int node)
     }
 
     /* apply a floor to alpha */
-    //uiVar[VAR::U_ALPHA][node] = std::max(uiVar[VAR::U_ALPHA][node], ALPHA_FLOOR);
+    uiVar[VAR::U_ALPHA][node] = std::max(uiVar[VAR::U_ALPHA][node], ALPHA_FLOOR);
 }
 

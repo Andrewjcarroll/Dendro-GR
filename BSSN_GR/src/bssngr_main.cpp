@@ -18,7 +18,6 @@
 #include "sdc.h"
 #include "bssnCtx.h"
 
-
 int main (int argc, char** argv)
 {
     // 0- NUTS 1-UTS
@@ -103,6 +102,9 @@ int main (int argc, char** argv)
 
     }
 
+    std::vector<std::string> arg_s(argv, argv+argc);
+    //bssn:printGitInformation(rank, arg_s);
+
     //1 . read the parameter file.
     if(!rank) std::cout<<" reading parameter file :"<<argv[1]<<std::endl;
     bssn::readParamFile(argv[1],comm);
@@ -132,6 +134,7 @@ int main (int argc, char** argv)
     std::function<void(double,double,double,double*)> f_init=[](double x,double y,double z,double*var){bssn::initialDataFunctionWrapper(x,y,z,var);};
     std::function<double(double,double,double)> f_init_alpha=[](double x,double y,double z){ double var[24]; bssn::initialDataFunctionWrapper(x,y,z,var); return var[0];};
     //std::function<void(double,double,double,double*)> f_init=[](double x,double y,double z,double*var){bssn::KerrSchildData(x,y,z,var);};
+    std::function<void(double,double,double,double*)> f_init_flat = [](double x, double y, double z, double* var){bssn::minkowskiInitialData(x, y, z, var);};
 
     const unsigned int interpVars=bssn::BSSN_NUM_VARS;
     unsigned int varIndex[interpVars];
@@ -190,6 +193,18 @@ int main (int argc, char** argv)
         function2Octree(f_init, bssn::BSSN_NUM_VARS, varIndex, interpVars,
                         tmpNodes, maxDepthIn, bssn::BSSN_WAVELET_TOL,
                         bssn::BSSN_ELE_ORDER, comm);
+        std::function<void(double, double, double, double*)> *f_init_use;
+
+        // TODO: Need to add some custom logic here to determine if function2Octree should use flat initialization or 
+        //
+        if (true) {
+            f_init_use = &f_init;
+        } else {
+            f_init_use = &f_init_flat;
+        }
+
+        //function2Octree(*f_init_use,bssn::BSSN_NUM_VARS,varIndex,interpVars,tmpNodes,(f2olmin-MAXDEAPTH_LEVEL_DIFF-2),bssn::BSSN_WAVELET_TOL,bssn::BSSN_ELE_ORDER,comm);
+        
     }
 
     ot::Mesh * mesh = ot::createMesh(tmpNodes.data(),tmpNodes.size(),bssn::BSSN_ELE_ORDER,comm,1,ot::SM_TYPE::FDM,bssn::BSSN_DENDRO_GRAIN_SZ,bssn::BSSN_LOAD_IMB_TOL,bssn::BSSN_SPLIT_FIX);
