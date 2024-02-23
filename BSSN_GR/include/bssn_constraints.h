@@ -54,31 +54,54 @@ inline void enforce_bssn_constraints(double **uiVar, unsigned int node)
 
 
      //Debugging code for Teukolsky:
-    if (std::isnan(alpha)) std::cout << "alpha is NaN "<< std::endl;
-    if (std::isnan(chi)) std::cout << "chi is NaN "<< std::endl;
-    if (std::isnan(K)) std::cout << "K is NaN "<< std::endl;
-    if (std::isnan(gtd[0][0])) std::cout << "gt0 is NaN "<< std::endl;
-    if (std::isnan(gtd[0][1])) std::cout << "gt1 is NaN "<< std::endl;
-    if (std::isnan(gtd[0][2])) std::cout << "gt2 is NaN "<< std::endl;
-    if (std::isnan(gtd[1][1])) std::cout << "gt3 is NaN "<< std::endl;
-    if (std::isnan(gtd[1][2])) std::cout << "gt4 is NaN "<< std::endl;
-    if (std::isnan(gtd[2][2])) std::cout << "gt5 is NaN "<< std::endl;
-    if (std::isnan(beta0)) std::cout << "beta0 is NaN "<< std::endl;
-    if (std::isnan(beta1)) std::cout << "beta1 is NaN "<< std::endl;
-    if (std::isnan(beta2)) std::cout << "beta2 is NaN "<< std::endl;
-    if (std::isnan(Atd[0][0])) std::cout << "At0 is NaN "<< std::endl;
-    if (std::isnan(Atd[0][1])) std::cout << "At1 is NaN "<< std::endl;
-    if (std::isnan(Atd[0][2])) std::cout << "At2 is NaN "<< std::endl;
-    if (std::isnan(Atd[1][1])) std::cout << "At3 is NaN "<< std::endl;
-    if (std::isnan(Atd[1][2])) std::cout << "At4 is NaN "<< std::endl;
-    if (std::isnan(Atd[2][2])) std::cout << "At5 is NaN "<< std::endl;
-    if (std::isnan(Gt0)) std::cout << "Gt0 is NaN "<< std::endl;
-    if (std::isnan(Gt1)) std::cout << "Gt1 is NaN "<< std::endl;
-    if (std::isnan(Gt2)) std::cout << "Gt2 is NaN "<< std::endl;
-    if (std::isnan(B0)) std::cout << "B0 is NaN "<< std::endl;
-    if (std::isnan(B1)) std::cout << "B1 is NaN "<< std::endl;
-    if (std::isnan(B2)) std::cout << "B2 is NaN "<< std::endl;
-                //exit(0);
+    if (std::isnan(alpha)) {std::cout << "alpha is NaN "<< std::endl;
+    exit(0);}
+    if (std::isnan(chi)) {std::cout << "chi is NaN "<< std::endl;
+    exit(0);}
+    if (std::isnan(K)) {std::cout << "K is NaN "<< std::endl;
+    exit(0);}
+    if (std::isnan(gtd[0][0])) {std::cout << "gt0 is NaN "<< std::endl;
+    exit(0);}
+    if (std::isnan(gtd[0][1])) {std::cout << "gt1 is NaN "<< std::endl;
+    exit(0);}
+    if (std::isnan(gtd[0][2])) {std::cout << "gt2 is NaN "<< std::endl;
+    exit(0);}
+    if (std::isnan(gtd[1][1])) {std::cout << "gt3 is NaN "<< std::endl;
+    exit(0);}
+    if (std::isnan(gtd[1][2])) {std::cout << "gt4 is NaN "<< std::endl;
+    exit(0);}
+    if (std::isnan(gtd[2][2])) {std::cout << "gt5 is NaN "<< std::endl;
+    exit(0);}
+    if (std::isnan(beta0)) {std::cout << "beta0 is NaN "<< std::endl;
+    exit(0);}
+    if (std::isnan(beta1)) {std::cout << "beta1 is NaN "<< std::endl;
+    exit(0);}
+    if (std::isnan(beta2)) {std::cout << "beta2 is NaN "<< std::endl;
+    exit(0);}
+    if (std::isnan(Atd[0][0])) {std::cout << "At0 is NaN Reset to another value for testing purposes...."<< std::endl;
+    Atd[0][0] = 0.0;}
+    if (std::isnan(Atd[0][1])) {std::cout << "At1 is NaN Reset to another value for testing purposes...."<< std::endl;
+    Atd[0][1] = 0.0;}
+    if (std::isnan(Atd[0][2])) {std::cout << "At2 is NaN Reset to another value for testing purposes...."<< std::endl;
+    Atd[0][2] = 0.0;}
+    if (std::isnan(Atd[1][1])) {std::cout << "At3 is NaN Reset to another value for testing purposes...."<< std::endl;
+    Atd[1][1] = 0.0;}
+    if (std::isnan(Atd[1][2])) {std::cout << "At4 is NaN Reset to another value for testing purposes...."<< std::endl;
+    Atd[1][2] = 0.0;}
+    if (std::isnan(Atd[2][2])) {std::cout << "At5 is NaN Reset to another value for testing purposes...."<< std::endl;
+    Atd[2][2] = 0.0;}
+    if (std::isnan(Gt0)) {std::cout << "Gt0 is NaN "<< std::endl;
+    exit(0);}
+    if (std::isnan(Gt1)) {std::cout << "Gt1 is NaN "<< std::endl;
+    exit(0);}
+    if (std::isnan(Gt2)) {std::cout << "Gt2 is NaN "<< std::endl;
+    exit(0);}
+    if (std::isnan(B0)) {std::cout << "B0 is NaN "<< std::endl;
+    exit(0);}
+    if (std::isnan(B1)) {std::cout << "B1 is NaN "<< std::endl;
+    exit(0);}
+    if (std::isnan(B2)) {std::cout << "B2 is NaN "<< std::endl;
+    exit(0);}
 
 
 
@@ -213,7 +236,15 @@ inline void enforce_bssn_constraints(double **uiVar, unsigned int node)
         uiVar[VAR::U_CHI][node] = CHI_FLOOR;
     }
 
+    /* apply a positive floor to alpha */
+   uiVar[VAR::U_ALPHA][node] = std::max(uiVar[VAR::U_ALPHA][node], ALPHA_FLOOR);
     /* apply a floor to alpha */
-    uiVar[VAR::U_ALPHA][node] = std::max(uiVar[VAR::U_ALPHA][node], ALPHA_FLOOR);
+        //  if (uiVar[VAR::U_ALPHA][node] > 0) {
+        //     uiVar[VAR::U_ALPHA][node] =
+        //         std::max(uiVar[VAR::U_ALPHA][node], ALPHA_FLOOR);
+        // } else if (uiVar[VAR::U_ALPHA][node] < 0) {
+        //     uiVar[VAR::U_ALPHA][node] =
+        //         std::min(uiVar[VAR::U_ALPHA][node], -1.0 * ALPHA_FLOOR);
+        // }
 }
 

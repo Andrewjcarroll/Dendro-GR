@@ -845,6 +845,10 @@ namespace bssn
                 bssn::NLTeukData(xx_grid, yy_grid,zz_grid, var);
 
                 break;
+            case 11:
+                bssn::Bin_KerrData(xx_grid, yy_grid,zz_grid, var);
+
+                break;
 
             case 10:
 
@@ -1502,7 +1506,40 @@ namespace bssn
 
 
     }
+void Bin_KerrData(const double xx1, const double yy1, const double zz1,
+                  double* var) {
+        const double xx = GRIDX_TO_X(xx1);
+        const double yy = GRIDY_TO_Y(yy1);
+        const double zz = GRIDZ_TO_Z(zz1);
 
+        // parameters for the BH (mass, location, spin parameter)
+        double M = BH1.getBHMass();
+        double bh1x = BH1.getBHCoordX();
+        double bh1y = BH1.getBHCoordY();
+        double bh1z = BH1.getBHCoordZ();
+        double spin1 = BH1.getBHSpin();
+
+        // coordinates relative to the center of the BH
+        double x = xx - bh1x;
+        double y = yy - bh1y;
+        double z = zz - bh1z;
+
+        // locating as a radial form
+        double r = sqrt(x * x + y * y + z * z);
+
+        // HL : Angular momentum parameter will be added as param file after
+        // testing
+        double a = spin1;
+
+        double gtd[3][3], Atd[3][3];
+        double alpha, Gamt[3];
+        double Chi, TrK, Betau[3];
+
+#include "init_data_helpers/NLTeuk_vars.cpp"
+#include "init_data_helpers/Bin_Kerr.cpp"
+
+
+    }
     void noiseData(const double xx1,const double yy1,const double zz1, double *var)
     {
 
