@@ -279,28 +279,32 @@ if ( id_dynamics_type == 0 ) { // time symmetric
 pi = 3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986;
 
 //std::cout << "starting the loop in initial data ... /n";
+double offset = 0.01627605/7.0;
+double xbar = xx+ offset; 
+double ybar = yy; 
+double zbar = zz;
 
-rho_sqrd = xx*xx + yy*yy;
+rho_sqrd = xbar*xbar + ybar*ybar;
 rho = sqrt( rho_sqrd );
 
-r_sqrd = rho_sqrd + zz*zz;
+r_sqrd = rho_sqrd + zbar*zbar;
 rr = sqrt( r_sqrd );
 
 epsilon_sq = 1.0e-8;    // maybe we can read in grid info later? 
 r_origin = sqrt( r_sqrd + epsilon_sq );
 
 // Away from the axis of symmetry
-if ( abs(xx) > 1.0e-7  ||  abs(yy) > 1.0e-7 ) {
+if ( abs(xbar) > 1.0e-7  ||  abs(ybar) > 1.0e-7 ) {
 	sin_theta = rho / rr;
-	cos_theta = zz / rr;
+	cos_theta = zbar / rr;
 	sin_2theta = 2.0 * sin_theta * cos_theta;
 	cos_2theta = pow(cos_theta,2)-pow(sin_theta,2);
 	sin_3theta = ( 3.0 * sin_theta ) - ( 4.0 * pow(sin_theta,3) );
 	cos_3theta = ( 4.0 * pow(cos_theta,3) )-( 3.0 * cos_theta );
 	sin_4theta = cos_theta * (4.0 * sin_theta - 8.0 * pow(sin_theta,3));
 	cos_4theta = 8.0 * pow(cos_theta,4) - 8.0 * pow(cos_theta,2) + 1.0;
-	sin_phi = yy / rho;
-	cos_phi = xx / rho;
+	sin_phi = ybar / rho;
+	cos_phi = xbar / rho;
 	sin_2phi = 2.0 * sin_phi * cos_phi;
 	cos_2phi = pow(cos_phi,2) - pow(sin_phi,2);
 	sin_3phi = ( 3.0 * sin_phi ) - ( 4.0 * pow(sin_phi,3) );
@@ -309,9 +313,9 @@ if ( abs(xx) > 1.0e-7  ||  abs(yy) > 1.0e-7 ) {
 	cos_4phi = 8.0 * pow(cos_phi,4) - 8.0 * pow(cos_phi,2) + 1.0;
 } 
 // On the axis of symmetry but away from the origin
-else if ( ( abs(xx) < 1.0e-7 && abs(yy) < 1.0e-7 ) && abs(zz) > 1.0e-7  ) {
+else if ( ( abs(xbar) < 1.0e-7 && abs(ybar) < 1.0e-7 ) && abs(zbar) > 1.0e-7  ) {
 	sin_theta = rho / rr;
-	cos_theta = zz / rr;
+	cos_theta = zbar / rr;
 	sin_2theta = 2.0 * sin_theta * cos_theta;
 	cos_2theta = pow(cos_theta,2)-pow(sin_theta,2);
 	sin_3theta = ( 3.0 * sin_theta ) - ( 4.0 * pow(sin_theta,3) );
@@ -328,7 +332,7 @@ else if ( ( abs(xx) < 1.0e-7 && abs(yy) < 1.0e-7 ) && abs(zz) > 1.0e-7  ) {
 	cos_4phi = 8.0 * pow(cos_phi,4) - 8.0 * pow(cos_phi,2) + 1.0;
 }
 // At the origin
-else if ( ( abs(xx) < 1.0e-7 && abs(yy) < 1.0e-7 ) && abs(zz) < 1.0e-7 ) {
+else if ( ( abs(xbar) < 1.0e-7 && abs(ybar) < 1.0e-7 ) && abs(zbar) < 1.0e-7 ) {
 	sin_theta = 0.0;
 	cos_theta = 0.0;
 	sin_2theta = 2.0 * sin_theta * cos_theta;
@@ -347,9 +351,9 @@ else if ( ( abs(xx) < 1.0e-7 && abs(yy) < 1.0e-7 ) && abs(zz) < 1.0e-7 ) {
 	cos_4phi = 8.0 * pow(cos_phi,4) - 8.0 * pow(cos_phi,2) + 1.0;
 } else {
 	std::cout <<" problem in initial data /n";
-	std::cout << " x = " << xx ;
-	std::cout <<" y = "<< yy ;
-	std::cout <<" z = "<< zz;
+	std::cout << " x = " << xbar ;
+	std::cout <<" y = "<< ybar ;
+	std::cout <<" z = "<< zbar;
 	std::cout << " r = "<< rr;
 	std::cout << " rho = "<< rho;
 }
@@ -1161,16 +1165,16 @@ g_phph = rr*rr*sin_theta*sin_theta * g_bare_phph;
 // to Cartesian coordinates.  But we have to pay particular attention
 // to the axis and the origin of coordinates.
 if ( rho > 1.0e-7 ) { // everywhere but the axis ...
-	drdx = xx / rr;
-	drdy = yy / rr;
-	drdz = zz / rr;
+	drdx = xbar / rr;
+	drdy = ybar / rr;
+	drdz = zbar / rr;
 
-	dthdx = xx * zz / ( rr*rr*rho );
-	dthdy = yy * zz / ( rr*rr*rho );
+	dthdx = xbar * zbar / ( rr*rr*rho );
+	dthdy = ybar * zbar / ( rr*rr*rho );
 	dthdz = - rho /( rr*rr );
 
-	dphdx = - yy / ( rho_sqrd );
-	dphdy =   xx / ( rho_sqrd );
+	dphdx = - ybar / ( rho_sqrd );
+	dphdy =   xbar / ( rho_sqrd );
 	dphdz = 0.0;
 
 	g_xx =  (  drdx *  drdx * g_rr
@@ -1215,40 +1219,40 @@ if ( rho > 1.0e-7 ) { // everywhere but the axis ...
 	rho_axis = sqrt( rho_sqrd + epsilon_sq );
 
 	g_xx =  (  g_bare_rr
-		- ( yy*yy + zz*zz ) * ( g_bare_rr - g_bare_thth ) / (rr*rr)
-		- yy*yy * ( g_bare_thth - g_bare_phph ) / (rho_axis*rho_axis)
-		+ 2.0/rr * (xx/rho_axis)
-			* ( xx*zz/rr * g_bare_rth
-			    - yy * g_bare_rph
-			    - zz*(yy/rho_axis) * g_thph  ));
-	g_xy =  ( xx*yy/(rr*rr) * ( g_bare_rr - g_bare_phph )
-		+ xx*yy/(rho_axis*rho_axis) * zz*zz/(rr*rr)
+		- ( ybar*ybar + zbar*zbar ) * ( g_bare_rr - g_bare_thth ) / (rr*rr)
+		- ybar*ybar * ( g_bare_thth - g_bare_phph ) / (rho_axis*rho_axis)
+		+ 2.0/rr * (xbar/rho_axis)
+			* ( xbar*zbar/rr * g_bare_rth
+			    - ybar * g_bare_rph
+			    - zbar*(ybar/rho_axis) * g_thph  ));
+	g_xy =  ( xbar*ybar/(rr*rr) * ( g_bare_rr - g_bare_phph )
+		+ xbar*ybar/(rho_axis*rho_axis) * zbar*zbar/(rr*rr)
 			* ( g_bare_thth - g_bare_phph )
-		+ 2.0 * zz/(rr*rr) * (xx/rho_axis) * yy * g_bare_rth
-		+ (xx/rho_axis) * xx * g_bare_rph / rr
-		- (yy/rho_axis) * yy * g_bare_rph / rr
-		+ pow((xx/rho_axis),2) * zz * g_bare_thph / rr
-		- pow((yy/rho_axis),2) * zz * g_bare_thph / rr);
-	g_xz =  (  xx*zz/(rr*rr) * ( g_bare_rr - g_bare_thth )
-		+ (   zz*zz * (xx/rho_axis) * g_bare_rth
-		- xx*rho * g_bare_rth ) / (rr*rr)
-		- (zz/rr) * (yy/rho_axis) * g_bare_rph
-		+ yy * g_bare_thph / rr) ;
+		+ 2.0 * zbar/(rr*rr) * (xbar/rho_axis) * ybar * g_bare_rth
+		+ (xbar/rho_axis) * xbar * g_bare_rph / rr
+		- (ybar/rho_axis) * ybar * g_bare_rph / rr
+		+ pow((xbar/rho_axis),2) * zbar * g_bare_thph / rr
+		- pow((ybar/rho_axis),2) * zbar * g_bare_thph / rr);
+	g_xz =  (  xbar*zbar/(rr*rr) * ( g_bare_rr - g_bare_thth )
+		+ (   zbar*zbar * (xbar/rho_axis) * g_bare_rth
+		- xbar*rho * g_bare_rth ) / (rr*rr)
+		- (zbar/rr) * (ybar/rho_axis) * g_bare_rph
+		+ ybar * g_bare_thph / rr) ;
 	g_yy =  (  g_bare_rr
-		- (xx*xx + zz*zz)/(rr*rr) * ( g_bare_rr - g_bare_thth )
-		- pow((xx/rho_axis),2) * ( g_bare_thth - g_bare_phph )
-		+ 2.0/rr * (yy/rho_axis)
-			* ( yy*zz/rr * g_bare_rth
-			    + (xx/rho_axis)*zz * g_bare_thph
-			    + xx * g_bare_rph ));
-	g_yz =  (  yy*zz/(rr*rr) * ( g_bare_rr - g_bare_thth )
-		+ (yy/rho_axis)*zz*zz/(rr*rr) * g_bare_rth
-		- yy*rho/(rr*rr) * g_bare_rth
-		+ (zz/rr) * (xx/rho_axis) * g_bare_rph
-		- xx * g_bare_thph / rr);
+		- (xbar*xbar + zbar*zbar)/(rr*rr) * ( g_bare_rr - g_bare_thth )
+		- pow((xbar/rho_axis),2) * ( g_bare_thth - g_bare_phph )
+		+ 2.0/rr * (ybar/rho_axis)
+			* ( ybar*zbar/rr * g_bare_rth
+			    + (xbar/rho_axis)*zbar * g_bare_thph
+			    + xbar * g_bare_rph ));
+	g_yz =  (  ybar*zbar/(rr*rr) * ( g_bare_rr - g_bare_thth )
+		+ (ybar/rho_axis)*zbar*zbar/(rr*rr) * g_bare_rth
+		- ybar*rho/(rr*rr) * g_bare_rth
+		+ (zbar/rr) * (xbar/rho_axis) * g_bare_rph
+		- xbar * g_bare_thph / rr);
 	g_zz = (  g_bare_rr
               - (rho*rho)/(rr*rr) * ( g_bare_rr - g_bare_thth )
-              - 2.0 * zz * rho * g_bare_rth / (rr*rr));
+              - 2.0 * zbar * rho * g_bare_rth / (rr*rr));
 
 } else if ( rho < 1.0e-7 && rr < 1.0e-7) { // at the origin
 
@@ -1257,43 +1261,43 @@ if ( rho > 1.0e-7 ) { // everywhere but the axis ...
 
 
 	g_xx =  (  g_bare_rr
-		- ( yy*yy + zz*zz ) / (pow(r_origin,2))
+		- ( ybar*ybar + zbar*zbar ) / (pow(r_origin,2))
 			* ( g_bare_rr - g_bare_thth )
-		- yy*yy / (rho_axis*rho_axis)
+		- ybar*ybar / (rho_axis*rho_axis)
 			* ( g_bare_thth - g_bare_phph )
-		+ 2.0/(r_origin) * (xx/rho_axis)
-			* ( xx*zz/r_origin * g_bare_rth
-			   - yy * g_bare_rph
-			   - zz*(yy/rho_axis) * g_thph  ));
-	g_xy =  ( xx*yy/(pow(r_origin,2)) * ( g_bare_rr - g_bare_phph )
-		+ xx*yy/(rho_axis*rho_axis) * zz*zz/(pow(r_origin,2))
+		+ 2.0/(r_origin) * (xbar/rho_axis)
+			* ( xbar*zbar/r_origin * g_bare_rth
+			   - ybar * g_bare_rph
+			   - zbar*(ybar/rho_axis) * g_thph  ));
+	g_xy =  ( xbar*ybar/(pow(r_origin,2)) * ( g_bare_rr - g_bare_phph )
+		+ xbar*ybar/(rho_axis*rho_axis) * zbar*zbar/(pow(r_origin,2))
 			* ( g_bare_thth - g_bare_phph )
-		+ 2.0 * zz/(pow(r_origin,2)) * (xx/rho_axis) * yy * g_bare_rth
-		+ (xx/rho_axis) * (xx/r_origin) * g_bare_rph
-		- (yy/rho_axis) * (yy/r_origin) * g_bare_rph
-		+ pow((xx/rho_axis),2) * (zz/r_origin) * g_bare_thph
-		- pow((yy/rho_axis),2) * (zz/r_origin) * g_bare_thph);
-	g_xz =  ( xx*zz/(pow(r_origin,2)) * ( g_bare_rr - g_bare_thth )
-		+ (   pow((zz/r_origin),2) * (xx/rho_axis) * g_bare_rth
-		- (xx/r_origin)*(rho/r_origin) * g_bare_rth )
-		- (zz/r_origin) * (yy/rho_axis) * g_bare_rph
-		+ (yy/r_origin) * g_bare_thph);
+		+ 2.0 * zbar/(pow(r_origin,2)) * (xbar/rho_axis) * ybar * g_bare_rth
+		+ (xbar/rho_axis) * (xbar/r_origin) * g_bare_rph
+		- (ybar/rho_axis) * (ybar/r_origin) * g_bare_rph
+		+ pow((xbar/rho_axis),2) * (zbar/r_origin) * g_bare_thph
+		- pow((ybar/rho_axis),2) * (zbar/r_origin) * g_bare_thph);
+	g_xz =  ( xbar*zbar/(pow(r_origin,2)) * ( g_bare_rr - g_bare_thth )
+		+ (   pow((zbar/r_origin),2) * (xbar/rho_axis) * g_bare_rth
+		- (xbar/r_origin)*(rho/r_origin) * g_bare_rth )
+		- (zbar/r_origin) * (ybar/rho_axis) * g_bare_rph
+		+ (ybar/r_origin) * g_bare_thph);
 	g_yy =  ( g_bare_rr
-		- ( pow((xx/r_origin),2) + pow((zz/r_origin),2))
+		- ( pow((xbar/r_origin),2) + pow((zbar/r_origin),2))
 			* ( g_bare_rr - g_bare_thth )
-		- pow((xx/rho_axis),2) * ( g_bare_thth - g_bare_phph )
-		+ 2.0 * (yy/rho_axis)
-			* (  (yy/r_origin)*(zz/r_origin) * g_bare_rth
-			   + (xx/rho_axis)*(zz/r_origin) * g_bare_thph
-			   + (xx/r_origin) * g_bare_rph ));
-	g_yz =  (  (yy/r_origin)*(zz/r_origin) * ( g_bare_rr - g_bare_thth )
-		+ (yy/rho_axis)*pow((zz/r_origin),2) * g_bare_rth
-		- (yy/r_origin)*(rho/r_origin) * g_bare_rth
-		+ (zz/r_origin) * (xx/rho_axis) * g_bare_rph
-		- (xx/r_origin) * g_bare_thph);
+		- pow((xbar/rho_axis),2) * ( g_bare_thth - g_bare_phph )
+		+ 2.0 * (ybar/rho_axis)
+			* (  (ybar/r_origin)*(zbar/r_origin) * g_bare_rth
+			   + (xbar/rho_axis)*(zbar/r_origin) * g_bare_thph
+			   + (xbar/r_origin) * g_bare_rph ));
+	g_yz =  (  (ybar/r_origin)*(zbar/r_origin) * ( g_bare_rr - g_bare_thth )
+		+ (ybar/rho_axis)*pow((zbar/r_origin),2) * g_bare_rth
+		- (ybar/r_origin)*(rho/r_origin) * g_bare_rth
+		+ (zbar/r_origin) * (xbar/rho_axis) * g_bare_rph
+		- (xbar/r_origin) * g_bare_thph);
 	g_zz =  (  g_bare_rr
 		- pow((rho/r_origin),2) * ( g_bare_rr - g_bare_thth )
-		- 2.0 * (zz/r_origin) * (rho/r_origin) * g_bare_rth);
+		- 2.0 * (zbar/r_origin) * (rho/r_origin) * g_bare_rth);
 
 } else {
 	std::cout << " something strange happened ... ";
@@ -1307,9 +1311,9 @@ chi = pow(detg,-1.0 / 3.0 );
 if (detg<0) {
 	std::cout << "The determinant = " <<detg<<std::endl;
 	std::cout <<" r = "<< rr<<std::endl;
-	std::cout <<" x = "<< xx<<std::endl;
-	std::cout <<" y = "<< yy<<std::endl;
-	std::cout <<" z = " <<zz<<std::endl;
+	std::cout <<" x = "<< xbar<<std::endl;
+	std::cout <<" y = "<< ybar<<std::endl;
+	std::cout <<" z = " <<zbar<<std::endl;
 	
 	//Other debugging options
 	/*

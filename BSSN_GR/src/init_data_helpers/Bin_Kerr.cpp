@@ -61,16 +61,16 @@ double AT11_2;
 double AT12_2;
 double AT22_2;
 
-double offset = 4.0;
-double mass = 0.5 ; 
-double a_spin = 0.1 ; 
+double offset =  bssn::TEUK_WIDTH;
+double mass = 1.0; 
+double a_spin = bssn::TEUK_AMP; 
 // double mass = emda::EMDA_SINGLE_BH_MASS ; 
 // double a_spin = emda::EMDA_SINGLE_BH_SPIN ; 
 double rbar ; 
 double cyl_rho_bar ; 
-double xbar = xx+ offset; 
+double xbar = xx; 
 double ybar = yy; 
-double zbar = zz; 
+double zbar = zz+ offset; 
 
 double cyl_rho_bar_sqr = xbar*xbar + ybar*ybar ; 
 double rbar_sqr = cyl_rho_bar_sqr + zbar*zbar ; 
@@ -183,15 +183,15 @@ AT22_1 = 0.0 ;
 
 
 
-double mass_2 = 0.5 ; 
-double a_spin_2 = 0.1 ; 
+double mass_2 = 1.0 ; 
+double a_spin_2 = bssn::TEUK_AMP; 
 // double mass_2 = emda::EMDA_SINGLE_BH_mass_2 ; 
 // double a_spin_2 = emda::EMDA_SINGLE_BH_SPIN ; 
 double rbar_2 ; 
 double cyl_rho_bar_2 ; 
-double xbar_2 = xx-offset; 
+double xbar_2 = xx; 
 double ybar_2 = yy; 
-double zbar_2 = zz; 
+double zbar_2 = zz-offset; 
 
 double cyl_rho_bar_sqr_2 = xbar_2*xbar_2 + ybar_2*ybar_2 ; 
 double rbar_sqr_2 = cyl_rho_bar_sqr_2 + zbar_2*zbar_2 ; 

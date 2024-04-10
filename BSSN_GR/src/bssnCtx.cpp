@@ -692,7 +692,7 @@ int BSSNCtx::write_vtu() {
             unsigned int s_val[3] = {1u << (m_uiMaxDepth - 1),
                                      1u << (m_uiMaxDepth - 1),
                                      1u << (m_uiMaxDepth - 1)};
-            unsigned int s_norm[3] = {0, 0, 1};
+            unsigned int s_norm[3] = {1, 0, 0};
             io::vtk::mesh2vtu_slice(
                 m_uiMesh, s_val, s_norm, fPrefix, 2, fDataNames, fData,
                 (numEvolVars + numConstVars), (const char**)&pDataNames_char[0],
