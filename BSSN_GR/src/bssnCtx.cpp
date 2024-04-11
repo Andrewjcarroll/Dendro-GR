@@ -1,3 +1,4 @@
+
 /**
  * @file bssnCtx.cpp
  * @author Milinda Fernando (milinda@cs.utah.edu)
@@ -688,15 +689,25 @@ int BSSNCtx::write_vtu() {
         sprintf(fPrefix, "%s_%d", bssn::BSSN_VTU_FILE_PREFIX.c_str(),
                 m_uiTinfo._m_uiStep);
 
-        if (bssn::BSSN_VTU_Z_SLICE_ONLY) {
+                 if (bssn::BSSN_VTU_X_SLICE || bssn::BSSN_VTU_Y_SLICE ||
+            bssn::BSSN_VTU_Z_SLICE) {
             unsigned int s_val[3] = {1u << (m_uiMaxDepth - 1),
                                      1u << (m_uiMaxDepth - 1),
                                      1u << (m_uiMaxDepth - 1)};
-            unsigned int s_norm[3] = {1, 0, 0};
+            unsigned int s_norm[3] = {0, 0, 0};
+            if (bssn::BSSN_VTU_X_SLICE) {
+                s_norm[0] = 1;
+            }
+            if (bssn::BSSN_VTU_Y_SLICE) {
+                s_norm[1] = 1;
+            }
+            if (bssn::BSSN_VTU_Z_SLICE) {
+                s_norm[2] = 1;
+            }
             io::vtk::mesh2vtu_slice(
                 m_uiMesh, s_val, s_norm, fPrefix, 2, fDataNames, fData,
-                (numEvolVars + numConstVars), (const char**)&pDataNames_char[0],
-                (const double**)pData);
+                (numEvolVars + numConstVars),
+                (const char **)&pDataNames_char[0], (const double **)pData);
         } else
             io::vtk::mesh2vtuFine(m_uiMesh, fPrefix, 2, fDataNames, fData,
                                   (numEvolVars + numConstVars),

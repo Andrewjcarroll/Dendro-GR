@@ -322,9 +322,15 @@ namespace bssn
 
     /**@brief: option to enable if the set refinement mode should be used for initial grid converge */
     extern bool BSSN_USE_SET_REF_MODE_FOR_INITIAL_CONVERGE;
+
+    /**@brief: if true output only the x slice*/
+    extern bool BSSN_VTU_X_SLICE;
+
+    /**@brief: if true output only the y slice*/
+    extern bool BSSN_VTU_Y_SLICE;
     
     /**@brief: if true output only the z slice*/
-    extern bool BSSN_VTU_Z_SLICE_ONLY;
+    extern bool BSSN_VTU_Z_SLICE;
 
     /**@brief TS off set for LTS in BSSN*/
     extern unsigned int BSSN_LTS_TS_OFFSET;
@@ -377,7 +383,12 @@ namespace bssn
     extern unsigned int TEUK_KK;
 
     extern double TEUK_REFINEMENT_R0;
-
+//BINARY BLACK HOLE PARAMETERS
+extern double BINARY_MASS_1;
+extern double BINARY_MASS_2;
+extern double BINARY_SPIN_1;
+extern double BINARY_SPIN_2;
+extern double BINARY_SEPARATION;
     // note ko derivs are not included
     #ifdef BSSN_USE_ADVECTIVE_DERIVS
         const unsigned int BSSN_NUM_DERIVS= 138 + 74;

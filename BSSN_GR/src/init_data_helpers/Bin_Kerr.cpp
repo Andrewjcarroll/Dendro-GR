@@ -61,9 +61,9 @@ double AT11_2;
 double AT12_2;
 double AT22_2;
 
-double offset =  bssn::TEUK_WIDTH;
-double mass = 1.0; 
-double a_spin = bssn::TEUK_AMP; 
+double offset =  bssn::BINARY_SEPARATION;
+double mass = bssn::BINARY_MASS_1; 
+double a_spin = bssn::BINARY_SPIN_1; 
 // double mass = emda::EMDA_SINGLE_BH_MASS ; 
 // double a_spin = emda::EMDA_SINGLE_BH_SPIN ; 
 double rbar ; 
@@ -183,8 +183,8 @@ AT22_1 = 0.0 ;
 
 
 
-double mass_2 = 1.0 ; 
-double a_spin_2 = bssn::TEUK_AMP; 
+double mass_2 = bssn::BINARY_MASS_2; 
+double a_spin_2 = bssn::BINARY_SPIN_2; 
 // double mass_2 = emda::EMDA_SINGLE_BH_mass_2 ; 
 // double a_spin_2 = emda::EMDA_SINGLE_BH_SPIN ; 
 double rbar_2 ; 

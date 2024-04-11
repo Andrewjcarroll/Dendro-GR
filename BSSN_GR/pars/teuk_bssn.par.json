@@ -10,17 +10,17 @@
                 "           " : "Set to 1 restore solver from a checkpoint",
                 "BSSN_RESTORE_SOLVER":0,
                 "           " : "frequency for VTU output",
-                "BSSN_IO_OUTPUT_FREQ": 10,
+                "BSSN_IO_OUTPUT_FREQ": 1,
                 "           " : "frequency for remeshing test based on wavelets",
                 "BSSN_REMESH_TEST_FREQ": 10,
                 "           " : "frequency for psi4 extraction",
-                "BSSN_GW_EXTRACT_FREQ" : 10,
+                "BSSN_GW_EXTRACT_FREQ" : 1,
                 "           " : "Not used anymore",
                 "BSSN_EH_REFINE_VAL": 0.4,
                 "           " : "Not used anymore",
                 "BSSN_EH_COARSEN_VAL": 0.6,
                 "           " : "frequency for checkpoint output",
-                "BSSN_CHECKPT_FREQ": 300,
+                "BSSN_CHECKPT_FREQ": 722,
                 "           " : "VTU file output gap. (Not currently used. Might be usefull in adaptive timestepping)",
                 "BSSN_IO_OUTPUT_GAP": 1,
                 "           " : "file prefix for the vtu files",
@@ -28,7 +28,7 @@
                 "           " : "file prefix for the checkpoint files",
                 "BSSN_CHKPT_FILE_PREFIX": "cp/bssn_cp",
                 "           " : "file prefix for the intermediate profile files",
-                "BSSN_PROFILE_FILE_PREFIX": "bssn_prof",
+                "BSSN_PROFILE_FILE_PREFIX": "prof/bssn_prof",
                 "           " : "file prefix for tpid solver",
                 "TPID_FILEPREFIX":"rit_q1",
                 "           " : "number of variables (evolution) to output in vtu files",
@@ -39,8 +39,11 @@
                 "BSSN_NUM_CONST_VARS_VTU_OUTPUT": 6,
                 "           " : "constraint variable var ids",
                 "BSSN_VTU_OUTPUT_CONST_INDICES": [0,1,2,3,4,5],
-                "           " : "output sliced(z-dir)",
-                "BSSN_VTU_Z_SLICE_ONLY":true,
+                "           " : "output sliced(direction?",
+                "BSSN_VTU_X_SLICE": true,
+                "BSSN_VTU_Y_SLICE": false,
+                "BSSN_VTU_Z_SLICE": false,
+
         "__comment__" : "=======================================================",
     
     
@@ -56,7 +59,7 @@
                 "           " : "dimentionality of the octree, (meshing is supported only for 3D)",
                 "BSSN_DIM": 3,
                 "           " : "maximum level of refinement of the mesh",
-                "BSSN_MAXDEPTH":9,
+                "BSSN_MAXDEPTH":12,
                 "           " : "minimum level of refinement of the mesh",
                 "BSSN_MINDEPTH": 3,
         "__comment__" : "=======================================================",
@@ -70,7 +73,7 @@
                 "           " : "refinement on GWs ",
                "BSSN_GW_REFINE_WTOL":1e-4,
                 "           " : "set wavelet tolerance using a function (default 0)",
-                "BSSN_USE_WAVELET_TOL_FUNCTION" : 3,
+                "BSSN_USE_WAVELET_TOL_FUNCTION" : 6,
                 "           " : "the maximum value of wavelet tolerance",
                 "BSSN_WAVELET_TOL_MAX": 1e-3,
                 "           " : "radius R0 for wavelet tolerance function",
@@ -84,7 +87,7 @@
                 "           " : "fd intergrid transfer",
                 "BSSN_USE_FD_GRID_TRANSFER":false,
                 "           " : "refinement mode 0-WAMR , 1-EH, 2-EH_WAMR 3-BH_loc based",
-                "BSSN_REFINEMENT_MODE": 0,
+                "BSSN_REFINEMENT_MODE": 4,
     
     
         "__comment__" : "=======================================================",
@@ -98,7 +101,7 @@
                 "           " : "simulation time begin",
                 "BSSN_RK_TIME_BEGIN": 0,
                 "           " : "simulation time end",
-                "BSSN_RK_TIME_END": 800,
+                "BSSN_RK_TIME_END": 100,
                 "           " : "RK method to use (0- RK3 , 1- RK4, 2-RK45)",
                 "BSSN_RK_TYPE" : 1,
                 "           " : "prefered time step size (this is overwrited with the specified CFL factor, not recommend to use this)",
@@ -130,7 +133,6 @@
                 "BSSN_LAMBDA_3": 1,
                 "BSSN_LAMBDA_4": 1
                 },
-                
                 "BSSN_A_LAMBDA" :{
                 "BSSN_A_LAMBDA_0" :0,
                 "BSSN_A_LAMBDA_1" :2,
@@ -150,7 +152,8 @@
                 },
     
                 "ANG_PAR": 1e-2,
-                "CHI_FLOOR": 1e-4,
+                "CHI_FLOOR": 2e-4,
+                "ALPHA_FLOOR" :2e-4,
                 "BSSN_TRK0": 0.0,
                 "KO_DISS_SIGMA": 4e-1,
       "__comment__" : "========== ETA as a function parameters==============================",
@@ -165,7 +168,7 @@
     
         "__comment__" : "========== Select Initial Data =========================",
                 "           " : "0-TwoPuncture Elliptic sol, 1-HAD approximate sol, 2-Kerr-Schild, 5-Schwartzschild 6-Kerr 7-Teukolsky Wave Port",
-                "BSSN_ID_TYPE": 9,
+                "BSSN_ID_TYPE": 11,
     
         "__comment__" : "========================================================",
     
@@ -291,12 +294,20 @@
         "MULTIPOLE_PARITY": 0,
         "TEUK_ID_DYNAMICS_TYPE": 0,
         "TEUK_ID_FUNCTIONAL_FORM": 0,
-        "TEUK_AMP": 0.2,
+        "TEUK_AMP": 0.062,
         "TEUK_WIDTH": 2.0,
         "TEUK_R_0": 20.0,
         "TEUK_KK": 6,
-        "TEUK_REFINEMENT_RO": 2.0,
+        "TEUK_REFINEMENT_R0":30,
 
+        "__comment__" : "================= BINARY PARAMETERS========================",
+    
+        "BINARY_SEPARATION": 8.0,
+        "BINARY_MASS_1": 1.0,
+        "BINARY_SPIN_1": 0.1,
+        "BINARY_MASS_2": 1.0,
+        "BINARY_SPIN_2": 0.1,
+        
         "__comment__" : "========================================================"
     
     

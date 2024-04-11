@@ -159,12 +159,20 @@ namespace bssn
     unsigned int TEUK_KK;
     double TEUK_REFINEMENT_R0;
 
+    double BINARY_SEPARATION;
+    double BINARY_MASS_1;
+    double BINARY_SPIN_1;
+    double BINARY_MASS_2;
+    double BINARY_SPIN_2;
+
     // by default use WAMR refinement. 
     RefinementMode BSSN_REFINEMENT_MODE = RefinementMode::WAMR;
 
     bool BSSN_USE_SET_REF_MODE_FOR_INITIAL_CONVERGE = false;
 
-    bool BSSN_VTU_Z_SLICE_ONLY = true;
+    bool BSSN_VTU_X_SLICE = true;
+    bool BSSN_VTU_Y_SLICE = false;
+    bool BSSN_VTU_Z_SLICE = false;
 
     unsigned int BSSN_LTS_TS_OFFSET=4;
 

@@ -127,7 +127,15 @@ namespace bssn
             bssn::TEUK_KK=parFile["TEUK_KK"];
             bssn::TEUK_R_0=parFile["TEUK_R_0"];
             bssn::TEUK_REFINEMENT_R0=parFile["TEUK_REFINEMENT_R0"];
-            
+
+            //BINARY PARAMETERS
+            bssn::BINARY_SEPARATION=parFile["BINARY_SEPARATION"];
+            bssn::BINARY_MASS_1=parFile["BINARY_MASS_1"];
+            bssn::BINARY_SPIN_1=parFile["BINARY_SPIN_1"];
+            bssn::BINARY_MASS_2=parFile["BINARY_MASS_2"];
+            bssn::BINARY_SPIN_2=parFile["BINARY_SPIN_2"];
+
+
             if(parFile.find("BSSN_ELE_ORDER")!= parFile.end())
                 bssn::BSSN_ELE_ORDER = parFile["BSSN_ELE_ORDER"];
             
@@ -166,9 +174,12 @@ namespace bssn
             if (parFile.find("BSSN_CFL_FACTOR") != parFile.end()) {
                 bssn::BSSN_CFL_FACTOR=parFile["BSSN_CFL_FACTOR"];
             }
-
-            if(parFile.find("BSSN_VTU_Z_SLICE_ONLY") != parFile.end())
-                bssn::BSSN_VTU_Z_SLICE_ONLY=parFile["BSSN_VTU_Z_SLICE_ONLY"];
+            if(parFile.find("BSSN_VTU_X_SLICE") != parFile.end())
+                bssn::BSSN_VTU_X_SLICE=parFile["BSSN_VTU_X_SLICE"];
+            if(parFile.find("BSSN_VTU_Y_SLICE") != parFile.end())
+                bssn::BSSN_VTU_Y_SLICE=parFile["BSSN_VTU_Y_SLICE"];
+            if(parFile.find("BSSN_VTU_Z_SLICE") != parFile.end())
+                bssn::BSSN_VTU_Z_SLICE=parFile["BSSN_VTU_Z_SLICE"];
 
             if (parFile.find("BSSN_GW_EXTRACT_FREQ") != parFile.end()) {
                 bssn::BSSN_GW_EXTRACT_FREQ=parFile["BSSN_GW_EXTRACT_FREQ"];
@@ -343,6 +354,14 @@ namespace bssn
         par::Mpi_Bcast(&TEUK_KK,1,0,comm);
         par::Mpi_Bcast(&TEUK_REFINEMENT_R0,1,0,comm);
 
+        par::Mpi_Bcast(&BINARY_SEPARATION,1,0,comm);
+        par::Mpi_Bcast(&BINARY_MASS_1,1,0,comm);
+        par::Mpi_Bcast(&BINARY_SPIN_1,1,0,comm);
+        par::Mpi_Bcast(&BINARY_MASS_2,1,0,comm);
+        par::Mpi_Bcast(&BINARY_SPIN_2,1,0,comm);
+        
+
+
         char vtu_name[vtu_len+1];
         char chp_name[chp_len+1];
         char prf_name[prf_len+1];
@@ -511,7 +530,9 @@ namespace bssn
 
         par::Mpi_Bcast(GW::BSSN_GW_L_MODES,GW::BSSN_GW_MAX_LMODES,0,comm);
         par::Mpi_Bcast(GW::BSSN_GW_RADAII,GW::BSSN_GW_MAX_RADAII,0,comm);
-        par::Mpi_Bcast(&bssn::BSSN_VTU_Z_SLICE_ONLY,1,0,comm);
+        par::Mpi_Bcast(&bssn::BSSN_VTU_X_SLICE,1,0,comm);
+        par::Mpi_Bcast(&bssn::BSSN_VTU_Y_SLICE,1,0,comm);
+        par::Mpi_Bcast(&bssn::BSSN_VTU_Z_SLICE,1,0,comm);
         par::Mpi_Bcast(&bssn::BSSN_EH_REFINE_VAL,1,0,comm);
         par::Mpi_Bcast(&bssn::BSSN_EH_COARSEN_VAL,1,0,comm);
 
@@ -548,7 +569,9 @@ namespace bssn
             sout<<YLW<<"\tBSSN_VTU_FILE_PREFIX :"<<bssn::BSSN_VTU_FILE_PREFIX<<NRM<<std::endl;
             sout<<YLW<<"\tBSSN_CHKPT_FILE_PREFIX :"<<bssn::BSSN_CHKPT_FILE_PREFIX<<NRM<<std::endl;
             sout<<YLW<<"\tBSSN_PROFILE_FILE_PREFIX :"<<bssn::BSSN_PROFILE_FILE_PREFIX<<NRM<<std::endl;
-            sout<<YLW<<"\tBSSN_VTU_Z_SLICE_ONLY :"<<bssn::BSSN_VTU_Z_SLICE_ONLY<<NRM<<std::endl;
+            sout<<YLW<<"\tBSSN_VTU_X_SLICE :"<<bssn::BSSN_VTU_X_SLICE<<NRM<<std::endl;
+            sout<<YLW<<"\tBSSN_VTU_Y_SLICE :"<<bssn::BSSN_VTU_Y_SLICE<<NRM<<std::endl;
+            sout<<YLW<<"\tBSSN_VTU_Z_SLICE :"<<bssn::BSSN_VTU_Z_SLICE<<NRM<<std::endl;
             sout<<YLW<<"\tBSSN_IO_OUTPUT_GAP :"<<bssn::BSSN_IO_OUTPUT_GAP<<NRM<<std::endl;
             sout<<YLW<<"\tBSSN_DENDRO_GRAIN_SZ :"<<bssn::BSSN_DENDRO_GRAIN_SZ<<NRM<<std::endl;
             sout<<YLW<<"\tBSSN_ASYNC_COMM_K :"<<bssn::BSSN_ASYNC_COMM_K<<NRM<<std::endl;
@@ -748,9 +771,24 @@ namespace bssn
                         "///\n"
                      << std::endl;
             }
+             if (bssn::BSSN_ID_TYPE == 11) {
+    sout << "//////////////BINARY PARAMETERS/////////////////////\n";
+    sout << "\tSEPARATION: " << BINARY_SEPARATION << std::endl;
+
+    sout << "//////////////BLACK HOLE 1 PARAMETERS PARAMETERS/////////////////////\n";
+    sout << "\tBLACK HOLE 1 MASS: " << BINARY_MASS_1 << std::endl;
+    sout << "\tBLACK HOLE 1 SPIN: " << BINARY_SPIN_1 << std::endl;
+
+    sout << "//////////////BLACK HOLE 2 PARAMETERS PARAMETERS/////////////////////\n";
+    sout << "\tBLACK HOLE 2 MASS: " << BINARY_MASS_2 << std::endl;
+    sout << "\tBLACK HOLE 2 SPIN: " << BINARY_SPIN_2 << std::endl;
+}
         }
         
     }
+
+    
+
 
     double CalTolHelper(const double t, const double r, const double rad[], const double eps[], const double toffset) 
     {

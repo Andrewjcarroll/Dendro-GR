@@ -1506,7 +1506,7 @@ void RK_BSSN::rkSolve()
 
         #ifdef BSSN_ENABLE_VTU_OUTPUT
             if((m_uiCurrentStep % bssn::BSSN_IO_OUTPUT_FREQ) ==0)
-                writeToVTU(m_uiPrevVar,m_uiConstraintVars,bssn::BSSN_NUM_EVOL_VARS_VTU_OUTPUT,bssn::BSSN_NUM_CONST_VARS_VTU_OUTPUT,bssn::BSSN_VTU_OUTPUT_EVOL_INDICES,bssn::BSSN_VTU_OUTPUT_CONST_INDICES,bssn::BSSN_VTU_Z_SLICE_ONLY);
+                writeToVTU(m_uiPrevVar,m_uiConstraintVars,bssn::BSSN_NUM_EVOL_VARS_VTU_OUTPUT,bssn::BSSN_NUM_CONST_VARS_VTU_OUTPUT,bssn::BSSN_VTU_OUTPUT_EVOL_INDICES,bssn::BSSN_VTU_OUTPUT_CONST_INDICES,bssn::BSSN_VTU_Z_SLICE);
         #endif
 
         
