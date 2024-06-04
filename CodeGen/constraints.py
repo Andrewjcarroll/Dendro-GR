@@ -148,8 +148,9 @@ psi4_3_img = inv_chi * sum([sum([NR[i,j]* Uu[i,j] + MR[i,j]*Vv[i,j] for i in den
 
 #12/31/2020: 0.5 is replaced with rational. 
 psi4_4_real = inv_chi * inv_chi * (m_real_A_vec * (m_real_A_vec + Rational(1,2) * m_real_d_chi) - m_img_A_vec * (m_img_A_vec + Rational(1,2) * m_img_d_chi))  
-psi4_4_img = inv_chi * inv_chi * (m_real_A_vec * (m_img_A_vec - Rational(1,2) * m_img_d_chi ) + m_img_A_vec * (m_real_A_vec - Rational(1,2) * m_real_d_chi))  
-
+psi4_4_img = inv_chi * inv_chi * (m_real_A_vec * (m_img_A_vec + Rational(1,2) * m_img_d_chi ) + m_img_A_vec * (m_real_A_vec + Rational(1,2) * m_real_d_chi)) 
+# this is potentially worng but is kept here for comparison purposes. 
+#psi4_4_img = inv_chi * inv_chi * (m_real_A_vec * (m_img_A_vec - Rational(1,2) * m_img_d_chi ) + m_img_A_vec * (m_real_A_vec - Rational(1,2) * m_real_d_chi)) 
 # Adding previous auxilary Psi4 calculations
 # 12/31/2020 : There is a - sign convention issue to match the sign with the LazEv Code. 
 #psi4_real =     psi4_1_real + psi4_2_real - psi4_3_real - psi4_4_real
